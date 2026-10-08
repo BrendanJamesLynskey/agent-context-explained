@@ -1,0 +1,56 @@
+<CostWidget>
+  <Eq
+    label="Over Q questions about a document set of N tokens: the long prompt pays for N every time; with the prompt cache it writes N once at the cache-write price and then reads it at the cache-read price; retrieval pays for k chunks of mean size c each time"
+    tex="\begin{gathered} \htmlClass{hl-long}{C_{\text{long}} = Q\,(N + q)\,p_{\text{in}}} \\ \htmlClass{hl-cache}{C_{\text{cache}} \approx} \htmlClass{hl-write}{N\,p_{\text{write}}} \htmlClass{hl-cache}{+ (Q - 1)\,N\,p_{\text{read}}} \\ \htmlClass{hl-rag}{C_{\text{rag}} = Q\,(k\,\bar c + q)\,p_{\text{in}}} \\ \text{(each plus the system prompt and the output)} \end{gathered}"
+  />
+</CostWidget>
+
+<Layer kind="concept">
+
+Context windows of a million tokens raise an obvious question: why retrieve at all? Put the whole document set in the prompt and let the model find the answer. The engine prices that against retrieval, question by question, from the engine's dated list prices and cache rules (the same accounting as [Agent Harnesses Explained, prompt caching](https://agent-harnesses-explained.vercel.app/learn/04-prompt-caching)) and token counts measured on this corpus: a system prompt of <V of="tradeoff.sizes.system" fmt="int" /> tokens, questions of <V of="tradeoff.sizes.question" fmt="num" /> tokens on average and chunks of <V of="tradeoff.sizes.chunk" fmt="num" />.
+
+Fifty questions, a minute apart, about a set of a million tokens, at Claude Sonnet 4.6's list prices:
+
+- **The whole set in every prompt** costs <V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.long.cost.0" fmt="usd" /> a question, <V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.long.cum.49" fmt="usd" /> for the fifty, and with this simple latency model the first token arrives after <V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.long.ttft.0" fmt="s" /> of prefill, every time.
+- **With the prompt cache**, the first call writes the set to the cache at a premium (<V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.long+cache.cost.0" fmt="usd" />) and every later call reads it at a tenth of the input price (<V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.long+cache.cost.1" fmt="usd" />): <V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.long+cache.cum.49" fmt="usd" /> for the fifty, <V of="derived.tradeoff.long_over_cache" fmt="num" /> times cheaper, and the later first tokens arrive in <V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.long+cache.ttft.1" fmt="s" />. The cache pays for itself from the second question, as long as the questions come within its lifetime.
+- **Retrieval** of the top five reranked chunks costs <V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.rag.cost.0" fmt="usd" /> a question, <V of="tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.rag.cum.49" fmt="usd" /> for the fifty: another <V of="derived.tradeoff.cache_over_rag" fmt="num" /> times less than the cached long prompt, and its cost does not depend on the size of the set at all.
+
+What does retrieval give up? On this corpus, the answer is in the top five chunks for <V of="tradeoff.recall.5" fmt="pct1" /> of the questions (top three: <V of="tradeoff.recall.3" fmt="pct1" />; measured in [chapter 4](/learn/04-hybrid-and-reranking)). The long prompt always contains the answer, but containing it is not the same as using it: [chapter 6](/learn/06-packing-the-window) showed why an answer buried in the middle of a long input is used less often. The long prompt wins when questions need many scattered parts of the set at once, or when the set is small: at the corpus's own size (<V of="tradeoff.sizes.corpus" fmt="int" /> tokens) the cached long prompt costs <V of="tradeoff.runs.claude-sonnet-4.6|37499|5.strategies.long+cache.cum.49" fmt="usd" /> for the fifty questions, and retrieval's machinery may not be worth building.
+
+</Layer>
+
+<Callout kind="illustrative">
+
+**Prices are dated list prices** (accessed 2026-10-07, linked on the [data page](/data)) and change; token counts are Qwen2.5's, not each provider's tokenizer. Sets larger than the corpus are **hypothetical**: the same arithmetic for a bigger set. Whether a given model accepts a million-token prompt, and any surcharge for very long prompts, are **not modelled**; check the provider's pricing page. Latency uses the round-number hosted profile (prefill 5,000 tokens/s, a 400 ms overhead) and treats cached tokens as free to prefill. The cache rule is the engine's simple prefix model. Output is 50 tokens a question.
+
+</Callout>
+
+<Layer kind="maths">
+
+Per question, the long prompt costs $(N + q)\,p_{\text{in}}$ and retrieval $(k \bar c + q)\,p_{\text{in}}$, so their ratio is about $N / (k \bar c)$: here $10^6 / (5 \times 180) \approx 1{,}100$ before output tokens. Caching divides the long prompt's per-question cost by $p_{\text{in}} / p_{\text{read}}$ (10 at these list prices) after a first call that costs $p_{\text{write}} / p_{\text{in}}$ times more (1.25 for the Claude models; GPT-5 mini charges no write premium). The cached long prompt overtakes the uncached one at the second question, and never overtakes retrieval while $N\,p_{\text{read}} > k \bar c\,p_{\text{in}}$, that is while the set is more than $k \bar c \,p_{\text{in}}/p_{\text{read}} \approx 9{,}000$ tokens.
+
+Time to first token is the overhead plus the uncached prompt over the prefill rate: $N / 5{,}000$ seconds for an uncached million-token prompt.
+
+</Layer>
+
+<Layer kind="code">
+
+Each question's cost, cut from the vendored engine (`runQuestions`): the cached prefix is read from the cache once it has been written and is still alive.
+
+```ts
+if (s === "long+cache") {
+  if (alive >= 0 && now - alive <= price.ttl_ms) {
+    const c = Math.floor(prefix / price.block) * price.block;
+    cached = c >= price.min_tokens ? c : 0;
+  }
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- [LLM Inference Explained](https://llm-inference-explained.vercel.app) for why prefill time grows with the prompt, and [Inference Trade-offs Explained](https://inference-tradeoffs-explained.vercel.app) for what serving long prompts does to the hardware.
+- [Agent Harnesses Explained, prompt caching](https://agent-harnesses-explained.vercel.app/learn/04-prompt-caching) and [cost and latency](https://agent-harnesses-explained.vercel.app/learn/10-cost-and-latency).
+- RAG series: [production cost](https://brendanjameslynskey.github.io/RAG_07_Production_RAG/#slide-07), [latency budgets and caching](https://brendanjameslynskey.github.io/RAG_07_Production_RAG/#slide-04) and a [worked example of a two-step pipeline](https://brendanjameslynskey.github.io/RAG_08_Two_Step_Retrieval_Architecture/#slide-10).
+
+</Callout>

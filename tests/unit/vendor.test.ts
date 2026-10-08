@@ -75,7 +75,7 @@ describe("vendored engine", () => {
       }[];
       chunks: Record<string, number[][]>;
     };
-    expect(fx.engine).toBe("1.4.0");
+    expect(fx.engine).toBe("1.5.0");
     const c = nodeCorpus();
     for (const [name, want] of Object.entries(fx.chunks))
       expect(
@@ -87,6 +87,28 @@ describe("vendored engine", () => {
     expect(mine.length).toBeGreaterThanOrEqual(10);
     for (const e of mine)
       expect(ctx.evaluate(r, e.method, e.params)).toEqual(e);
+  });
+
+  it("the engine's 1.5 fixtures (packing, compaction, memory, long context) are reproduced by the vendored port", async () => {
+    const { ctx } = await import("@/lib/engine");
+    const { nodeCorpus } = await import("@/lib/engine/node");
+    const fx = JSON.parse(
+      readFileSync(join(ROOT, "tests/fixtures/context2_fixtures.json"), "utf8"),
+    ) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+    expect(fx.engine).toBe("1.5.0");
+    const r = new ctx.Retriever(nodeCorpus(), ctx.DEFAULT);
+    for (const w of fx.lossy)
+      expect(ctx.windowRun(r, fx.task, w.budget, w.policy, "lossy")).toEqual(w);
+    for (const v of fx.packing_views)
+      expect(ctx.packingView(r, v.q, v.budget)).toEqual(v);
+    const plan = ctx.memoryPlan(r);
+    expect(plan).toEqual(fx.memory_plan);
+    for (const m of fx.memory.slice(0, 8))
+      expect(ctx.memoryRun(r, m.policy, plan, m.name)).toEqual(m);
+    const t = fx.tradeoff;
+    expect(
+      ctx.tradeoff(r, [t.sizes.corpus, 200000, 1000000], [3, 5, 10, 20], 50),
+    ).toEqual(t);
   });
 
   it("the site's fixtures come from the same commit", () => {

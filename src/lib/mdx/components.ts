@@ -9,8 +9,12 @@ import { Layer } from "@/components/interactive/Layer";
 import {
   Bm25Widget,
   ChunkWidget,
+  CompactionWidget,
+  CostWidget,
   DenseWidget,
   HybridWidget,
+  MemoryWidget,
+  PackingWidget,
   WindowWidget,
 } from "@/components/interactive/lazy";
 import { Eq } from "@/components/mdx/Eq";
@@ -30,4 +34,8 @@ export const mdxComponents: NonNullable<MDXRemoteProps["components"]> = {
   DenseWidget,
   HybridWidget,
   ChunkWidget,
+  PackingWidget,
+  CompactionWidget,
+  MemoryWidget,
+  CostWidget,
 };

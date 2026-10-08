@@ -110,6 +110,13 @@ export function bm25Query(
 
 export type ChapterData = Obj;
 
+/** A run without its frames (for the numbers a chapter quotes but does not animate). */
+function summaryOf(w: Obj): Obj {
+  const out: Obj = {};
+  for (const [k, v] of Object.entries(w)) if (k !== "frames") out[k] = v;
+  return out;
+}
+
 /** Everything one chapter animates. */
 export function runChapter(chapter: Chapter, corpus: C.Corpus): ChapterData {
   const cfg = CHAPTER_CONFIGS[chapter];
@@ -120,7 +127,119 @@ export function runChapter(chapter: Chapter, corpus: C.Corpus): ChapterData {
     for (const b of cfg.budgets as number[])
       for (const p of cfg.policies as string[])
         runs[`${p}-${b}`] = C.windowRun(r, task, b, p);
+    for (const b of cfg.budgets as number[])
+      for (const p of cfg.lossy as string[])
+        runs[`lossy-${p}-${b}`] = C.windowRun(r, task, b, p, "lossy");
     return { task: task.map((qi) => questionInfo(corpus, qi)), runs };
+  }
+  if (chapter === "packing") {
+    const views: Obj = {};
+    const ids = new Set<number>();
+    for (const qi of cfg.questions as number[])
+      for (const b of cfg.budgets as number[]) {
+        const v = C.packingView(r, qi, b);
+        // every packer's final set in every placement (the view has the optimal set's)
+        const cands = v.candidates as C.Cand[];
+        const placed: Obj = {};
+        for (const p of C.PACKERS) {
+          placed[p] = {};
+          const ch = v.packers[p].chosen as number[];
+          for (const pl of C.PLACEMENTS) {
+            const order = C.place(cands, ch, pl);
+            placed[p][pl] = {
+              order,
+              positions: order.length ? C.positions(cands, order) : [],
+              p: order.length ? C.answerP(cands, order) : 0,
+            };
+          }
+        }
+        views[`${qi}-${b}`] = { ...v, placed };
+        for (const c of v.candidates as Obj[]) ids.add(c.chunk as number);
+      }
+    return {
+      questions: (cfg.questions as number[]).map((qi) =>
+        questionInfo(corpus, qi),
+      ),
+      views,
+      eval: C.packingEval(r, cfg.eval_budgets as number[]),
+      curve: C.positionCurve(),
+      position: C.POSITION,
+      chunks: Object.fromEntries(
+        [...ids].map((c) => [
+          c,
+          {
+            chunk: c,
+            title: corpus.articles[r.chunks[c]!.article]!.title,
+            tokens: r.chunks[c]!.tokens,
+          },
+        ]),
+      ),
+    };
+  }
+  if (chapter === "compaction") {
+    const task = C.taskQuestions(r, cfg.task as number);
+    const runs: Obj = {};
+    const baselines: Obj = {};
+    const studies: Obj = {};
+    const seeds = Array.from({ length: cfg.seeds as number }, (_, i) => i + 1);
+    for (const b of cfg.budgets as number[]) {
+      for (const p of cfg.baselines as string[]) {
+        const w = C.windowRun(r, task, b, p);
+        baselines[`${p}-${b}`] = summaryOf(w);
+      }
+      for (const p of cfg.policies as string[])
+        for (const loss of cfg.losses as number[]) {
+          runs[`${p}-${loss}-${b}`] = loss
+            ? C.windowRun(r, task, b, p, "lossy", loss, cfg.seed as number)
+            : C.windowRun(r, task, b, p);
+          if (loss && (cfg.studies as string[]).includes(p))
+            studies[`${p}-${loss}-${b}`] = C.compactionStudy(
+              r,
+              task,
+              b,
+              p,
+              loss,
+              seeds,
+            );
+        }
+    }
+    return {
+      task: task.map((qi) => questionInfo(corpus, qi)),
+      runs,
+      baselines,
+      studies,
+    };
+  }
+  if (chapter === "memory") {
+    const plan = C.memoryPlan(r);
+    const runs: Obj = {};
+    for (const [name, p] of Object.entries(C.MEMORY_POLICIES))
+      runs[name] = C.memoryRun(r, p, plan, name);
+    const sweep: Obj = {};
+    for (const [name, p] of C.MEMORY_SWEEP)
+      sweep[name] = summaryOf(C.memoryRun(r, p, plan, name));
+    const qids = new Set<number>(plan.learn as number[]);
+    for (const row of plan.probes as Obj[][])
+      for (const p of row) qids.add(p.q as number);
+    return {
+      plan,
+      runs,
+      sweep,
+      questions: Object.fromEntries(
+        [...qids]
+          .sort((a, b) => a - b)
+          .map((qi) => [qi, questionInfo(corpus, qi)]),
+      ),
+    };
+  }
+  if (chapter === "tradeoff") {
+    const sizes = C.measuredSizes(r);
+    return C.tradeoff(
+      r,
+      [sizes.corpus as number].concat(cfg.sizes as number[]),
+      cfg.ks as number[],
+      cfg.questions as number,
+    );
   }
   if (chapter === "lexical") {
     const qs = (cfg.queries as number[]).map(

@@ -14,9 +14,18 @@ import {
   type Obj,
 } from "@/lib/engine";
 import { nodeCorpus, nodeFiles } from "@/lib/engine/node";
-import { fmtInt, pct, trim } from "@/lib/format";
+import { fmtInt, fmtUsd, pct, trim } from "@/lib/format";
 
-export type Fmt = "int" | "pct" | "num" | "f2" | "f3" | "raw";
+export type Fmt =
+  | "int"
+  | "pct"
+  | "num"
+  | "f2"
+  | "f3"
+  | "raw"
+  | "usd"
+  | "s"
+  | "pct1";
 
 let TREE: Obj | null = null;
 
@@ -52,6 +61,25 @@ export function tree(): Obj {
       t.derived[`${p}-${b}`] = { spent_vs_unbounded: r.spent / un.spent };
     }
   }
+  // derived: which facts survive lossy compaction, by when they were learned (first and last sixth of the task)
+  for (const [k, st] of Object.entries(t.compaction.studies as Obj)) {
+    const bp = (st as Obj).by_position as number[];
+    const n = Math.floor(bp.length / 6);
+    let a = 0;
+    let z = 0;
+    for (let i = 0; i < n; i++) {
+      a += bp[i]!;
+      z += bp[bp.length - 1 - i]!;
+    }
+    t.derived[`compaction-${k}`] = { first_sixth: a / n, last_sixth: z / n };
+  }
+  // derived: the long-context chapter's ratios (all 50 questions, Sonnet list prices, 1M-token set, k = 5)
+  const tr = t.tradeoff.runs["claude-sonnet-4.6|1000000|5"].strategies as Obj;
+  const last = (x: Obj) => (x.cum as number[])[(x.cum as number[]).length - 1]!;
+  t.derived.tradeoff = {
+    long_over_cache: last(tr.long) / last(tr["long+cache"]),
+    cache_over_rag: last(tr["long+cache"]) / last(tr.rag),
+  };
   TREE = t;
   return t;
 }
@@ -89,5 +117,11 @@ export function formatValue(v: unknown, fmt: Fmt): string {
       return n.toFixed(2);
     case "f3":
       return n.toFixed(3);
+    case "pct1":
+      return pct(n, 1);
+    case "usd":
+      return fmtUsd(n);
+    case "s":
+      return `${trim(n / 1000)} s`;
   }
 }

@@ -89,5 +89,43 @@ describe("values", () => {
     expect(formatValue(0.78549, "f3")).toBe("0.785");
     expect(formatValue(0.785, "f2")).toBe("0.79");
     expect(formatValue("x", "raw")).toBe("x");
+    expect(formatValue(0.965, "pct1")).toBe("96.5%");
+    expect(formatValue(150.04455, "usd")).toBe("$150.04");
+    expect(formatValue(0.0036, "usd")).toBe("$0.0036");
+    expect(formatValue(200409, "s")).toBe("200 s");
+  });
+});
+
+describe("chapters 6 to 9 against the engine's recorded results, part 2", () => {
+  const R2 = readFileSync(
+    path.join(ROOT, "src/data/context2_results.md"),
+    "utf8",
+  );
+  it("packing, compaction, memory and long-context numbers match context2_results.md", () => {
+    const top = lookup("packing.eval.results.512.top") as Record<
+      string,
+      number
+    >;
+    expect(R2).toContain(
+      `| 512 | top | ${top.answered!.toFixed(3)} | ${top.tokens!.toFixed(1)} | ${top.value!.toFixed(3)} |`,
+    );
+    const st = lookup("compaction.studies.compact-0.25-1500") as {
+      recalled: number;
+      survival: { measured: number; model: number }[];
+    };
+    expect(R2).toContain(
+      `| 1500 | compact | 0.25 | ${st.recalled.toFixed(2)} of 36 |`,
+    );
+    expect(R2).toContain(
+      `| ${st.survival[4]!.measured.toFixed(3)} | ${st.survival[4]!.model.toFixed(3)} |`,
+    );
+    const m = lookup("memory.runs.semantic") as Record<string, number>;
+    expect(R2).toContain(
+      `| semantic | ${m.recalled} of ${m.probes} | 17 of 18 | 2 of 4 | ${m.read_tokens} | ${m.write_tokens} | ${m.stored_tokens} |`,
+    );
+    const cum = lookup(
+      "tradeoff.runs.claude-sonnet-4.6|1000000|5.strategies.long+cache.cum.49",
+    ) as number;
+    expect(R2).toContain(`| ${cum.toFixed(3)} |`);
   });
 });

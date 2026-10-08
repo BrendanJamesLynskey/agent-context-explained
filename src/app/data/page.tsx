@@ -4,6 +4,7 @@
  */
 import type { Obj } from "@/lib/engine";
 import { formatValue, lookup } from "@/lib/ctx/values";
+import { fmtInt } from "@/lib/format";
 import {
   CC_BY_SA,
   EMBEDDER_URL,
@@ -16,7 +17,7 @@ import {
 export const metadata = {
   title: "Data",
   description:
-    "The corpus (a SQuAD v1.1 subset, CC BY-SA 4.0), the embedding model and the reranker that ran offline, every shipped file's checksum, and every retrieval result on the 200 labelled questions.",
+    "The corpus (a SQuAD v1.1 subset, CC BY-SA 4.0), the embedding model and the reranker that ran offline, every shipped file's checksum, and every retrieval result on the 200 labelled questions, packing and memory results, and the dated prices behind the long-context chapter.",
 };
 
 const A =
@@ -52,6 +53,19 @@ function Row({
   );
 }
 
+function Scroll({ children }: { children: React.ReactNode }): JSX.Element {
+  return (
+    <div
+      className="focus-ring overflow-x-auto"
+      tabIndex={0}
+      role="region"
+      aria-label="Scrollable table"
+    >
+      {children}
+    </div>
+  );
+}
+
 function Head({ lost }: { lost?: boolean }): JSX.Element {
   return (
     <thead>
@@ -75,6 +89,7 @@ export default function DataPage(): JSX.Element {
   const ev = lookup("hybrid.evals") as Obj;
   const dv = lookup("dense.evals") as Obj;
   const table = lookup("chunking.table") as Obj;
+  const pack = lookup("packing.eval") as Obj;
   return (
     <main className="mx-auto max-w-4xl px-6 py-12">
       <p className="font-mono text-xs uppercase tracking-widest text-accent dark:text-indigo-300">
@@ -230,6 +245,174 @@ export default function DataPage(): JSX.Element {
           A question whose answer a chunking cuts in two (&ldquo;lost&rdquo;)
           scores 0 on every metric. Means are over all{" "}
           {v("corpus.questions", "int")} questions.
+        </p>
+
+        <h2>Packing (chapter 6)</h2>
+        <Scroll>
+          <table className="text-sm" data-testid="packing-table">
+            <thead>
+              <tr className="text-left text-neutral-600 dark:text-neutral-400">
+                {[
+                  "budget",
+                  "packer",
+                  "answer in window",
+                  "tokens used",
+                  "value",
+                  "p best-first",
+                  "p ends",
+                  "p middle",
+                ].map((h) => (
+                  <th key={h} className="py-1 pr-3 font-medium">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(pack.results as Obj).flatMap(([b, row]) =>
+                Object.entries(row as Obj).map(([p, r]) => (
+                  <tr key={`${b}-${p}`}>
+                    <td className="py-1 pr-3">{b}</td>
+                    <td className="py-1 pr-3">{p}</td>
+                    {[
+                      (r as Obj).answered,
+                      (r as Obj).tokens,
+                      (r as Obj).value,
+                      (r as Obj)["best-first"],
+                      (r as Obj).ends,
+                      (r as Obj).middle,
+                    ].map((x, i) => (
+                      <td key={i} className="py-1 pr-3 font-mono">
+                        {(x as number).toFixed(i === 1 ? 1 : 3)}
+                      </td>
+                    ))}
+                  </tr>
+                )),
+              )}
+            </tbody>
+          </table>
+        </Scroll>
+        <p>
+          Means over all {v("corpus.questions", "int")} questions, the reranked
+          top {v("packing.eval.candidates", "int")} as candidates. p is the
+          illustrative position curve at the answer (0 when it is not packed).
+        </p>
+
+        <h2>Memory across sessions (chapter 8)</h2>
+        <Scroll>
+          <table className="text-sm" data-testid="memory-table">
+            <thead>
+              <tr className="text-left text-neutral-600 dark:text-neutral-400">
+                {[
+                  "policy",
+                  "recalled",
+                  "memory tokens read",
+                  "write tokens",
+                  "stored at the end",
+                ].map((h) => (
+                  <th key={h} className="py-1 pr-3 font-medium">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ...Object.entries(lookup("memory.runs") as Obj),
+                ...Object.entries(lookup("memory.sweep") as Obj),
+              ].map(([name, r]) => (
+                <tr key={name}>
+                  <td className="py-1 pr-3">{name}</td>
+                  <td className="py-1 pr-3 font-mono">
+                    {(r as Obj).recalled as number} of{" "}
+                    {(r as Obj).probes as number}
+                  </td>
+                  <td className="py-1 pr-3 font-mono">
+                    {fmtInt((r as Obj).read_tokens as number)}
+                  </td>
+                  <td className="py-1 pr-3 font-mono">
+                    {fmtInt((r as Obj).write_tokens as number)}
+                  </td>
+                  <td className="py-1 pr-3 font-mono">
+                    {fmtInt((r as Obj).stored_tokens as number)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Scroll>
+
+        <h2>Prices (chapter 9)</h2>
+        <p>
+          List prices in US dollars per million tokens, copied from the
+          providers&apos; pages on the date shown. They are illustrative: prices
+          change, and the token counts here are Qwen2.5&apos;s.
+        </p>
+        <Scroll>
+          <table className="text-sm" data-testid="prices-table">
+            <thead>
+              <tr className="text-left text-neutral-600 dark:text-neutral-400">
+                {[
+                  "model",
+                  "input",
+                  "output",
+                  "cache read",
+                  "cache write",
+                  "cache minimum",
+                  "accessed",
+                ].map((h) => (
+                  <th key={h} className="py-1 pr-3 font-medium">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(lookup("tradeoff.prices") as Obj).map(
+                ([m, p]) => (
+                  <tr key={m}>
+                    <td className="py-1 pr-3">
+                      <a href={(p as Obj).source as string} className={A}>
+                        {(p as Obj).label as string}
+                      </a>
+                    </td>
+                    {["input", "output", "cache_read", "cache_write"].map(
+                      (k) => (
+                        <td key={k} className="py-1 pr-3 font-mono">
+                          {(p as Obj)[k] as number}
+                        </td>
+                      ),
+                    )}
+                    <td className="py-1 pr-3 font-mono">
+                      {fmtInt((p as Obj).min_tokens as number)}
+                    </td>
+                    <td className="py-1 pr-3 font-mono">
+                      {(p as Obj).accessed as string}
+                    </td>
+                  </tr>
+                ),
+              )}
+            </tbody>
+          </table>
+        </Scroll>
+        <p>
+          Every number on this page, and the rest (the lossy summariser&apos;s
+          survival curves, every long-context run), is in the engine&apos;s
+          recorded results:{" "}
+          <a
+            href={`${ENGINE_URL}/blob/main/fixtures/context_results.md`}
+            className={A}
+          >
+            part 1
+          </a>{" "}
+          and{" "}
+          <a
+            href={`${ENGINE_URL}/blob/main/fixtures/context2_results.md`}
+            className={A}
+          >
+            part 2
+          </a>
+          .
         </p>
       </div>
     </main>

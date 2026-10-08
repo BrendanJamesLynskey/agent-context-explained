@@ -1,4 +1,4 @@
 # The Python reference engine, at the commit the site vendors (src/lib/engine/vendor/VENDORED.json).
-agent-loop-sim @ git+https://github.com/BrendanJamesLynskey/Agent_Loop_Sim@df84c0e8be21f084116f708f5b049e3e13e0db36
+agent-loop-sim @ git+https://github.com/BrendanJamesLynskey/Agent_Loop_Sim@ce5c4067f9ee286ca7bf6183d59cfd4a438b5dad
 jsonschema>=4.0
 pytest>=8.0

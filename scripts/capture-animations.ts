@@ -30,7 +30,6 @@ type Clip = {
   radio?: string;
 };
 
-// README GIFs come in 23B; the clips are listed so `pnpm animations` works now.
 const CLIPS: Clip[] = [
   {
     name: "window",
@@ -55,6 +54,30 @@ const CLIPS: Clip[] = [
     path: "/learn/05-chunking",
     widget: "chunk-widget",
     fps: 3,
+  },
+  {
+    name: "packing",
+    path: "/learn/06-packing-the-window",
+    widget: "packing-widget",
+    fps: 2,
+  },
+  {
+    name: "compaction",
+    path: "/learn/07-compaction-and-summarisation",
+    widget: "compaction-widget",
+    fps: 5,
+  },
+  {
+    name: "memory",
+    path: "/learn/08-agent-memory",
+    widget: "memory-widget",
+    fps: 3,
+  },
+  {
+    name: "long-context",
+    path: "/learn/09-long-context-or-retrieval",
+    widget: "cost-widget",
+    fps: 6,
   },
 ];
 

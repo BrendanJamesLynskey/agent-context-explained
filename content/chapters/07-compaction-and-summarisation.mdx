@@ -1,0 +1,55 @@
+<CompactionWidget>
+  <Eq
+    label="A lossy summariser keeps each line with probability one minus the loss at every compaction, so a fact that has been through n compactions survives with probability (1 - loss) to the n; the summary replaces the old reads in the window"
+    tex="\begin{gathered} \Pr[\text{survives } n \text{ compactions}] = (1 - \htmlClass{hl-loss}{\ell})^{n} \\ W \to \text{system} + \text{task} + \htmlClass{hl-summary}{S(\text{old reads})} + \text{latest read} \\ |W| \le \htmlClass{hl-budget}{B} \end{gathered}"
+  />
+</CompactionWidget>
+
+<Layer kind="concept">
+
+[Chapter 1](/learn/01-the-window-is-the-working-memory) compacted a twelve-question task with a summariser that never forgot anything. This chapter makes the task three times longer, <V of="compaction.task.length" fmt="int" /> questions, six from each article, and asks what survives when the summariser is not perfect.
+
+With no budget the long task costs <V of="compaction.baselines.unbounded-1500.spent" fmt="int" /> input tokens and every fact stays in view. Truncating to a 1,500-token window keeps only <V of="compaction.baselines.truncate-1500.recalled" fmt="int" /> facts. A **perfect** summariser keeps <V of="compaction.runs.compact-0-1500.recalled" fmt="int" /> for <V of="compaction.runs.compact-0-1500.spent" fmt="int" /> tokens, in <V of="compaction.runs.compact-0-1500.compactions" fmt="int" /> compactions; it is not all 36 even so, because by the end the summary itself outgrows the budget and its oldest lines are trimmed. At 2,000 tokens the summary fits and all <V of="compaction.runs.compact-0-2000.recalled" fmt="int" /> survive.
+
+A real summariser drops things. The engine's **lossy** summariser rewrites the whole summary at every compaction and keeps each line with probability $1 - \ell$, drawn from the shared seeded generator, so a fact summarised $n$ times survives with probability $(1 - \ell)^n$. Over 20 seeded runs at $\ell = 0.25$ and a 1,500-token window, the measured share of facts left after one compaction is <V of="compaction.studies.compact-0.25-1500.survival.0.measured" fmt="f3" />, after two <V of="compaction.studies.compact-0.25-1500.survival.1.measured" fmt="f3" />, after five <V of="compaction.studies.compact-0.25-1500.survival.4.measured" fmt="f3" /> (the model says <V of="compaction.studies.compact-0.25-1500.survival.4.model" fmt="f3" />). The agent answers <V of="compaction.studies.compact-0.25-1500.recalled" fmt="num" /> of 36 questions on average.
+
+**Which** facts go is not random: the oldest. A fact learned early is summarised again at every later compaction, so the first sixth of the task is answered in <V of="derived.compaction-compact-0.25-1500.first_sixth" fmt="pct" /> of runs and the last sixth in <V of="derived.compaction-compact-0.25-1500.last_sixth" fmt="pct" />. Compaction does not forget evenly; it forgets the beginning of the task. A bigger window means fewer compactions and so more survivors: at 2,000 tokens the same summariser leaves <V of="compaction.studies.compact-0.25-2000.recalled" fmt="num" /> facts.
+
+The remedy is the one from chapter 1: notice the fact is gone and **search for it again**. With re-retrieval every one of the 36 questions is answered at every loss rate, but the agent pays for it: <V of="compaction.runs.compact+retrieve-0.25-1500.spent" fmt="int" /> tokens in one run at $\ell = 0.25$, about twice what compaction alone spends (<V of="compaction.runs.compact-0.25-1500.spent" fmt="int" />). Re-retrieval needs the source to still be there; when it is not, the next chapter's memories are all there is.
+
+</Layer>
+
+<Callout kind="illustrative">
+
+The **loss rates (0.1, 0.25, 0.5) are illustrative**: a real summariser's losses depend on the model, the prompt and the content, and are not independent coin flips; this model isolates the compounding. The agent is scripted (BM25 search, up to three reads a question); token counts are Qwen2.5's; the budgets are scaled down so that a 36-question task overflows them. The curve is measured on the engine's runs, not on a language model.
+
+</Callout>
+
+<Layer kind="maths">
+
+Let a fact enter the summary at compaction $c_0$ and the task have $C$ compactions. If each compaction keeps it independently with probability $1 - \ell$, it is still there at the end with probability $(1-\ell)^{C - c_0 + 1}$: geometric in how early it was learned. The measured curve $S(n) = \prod_{j \le n} \text{kept}_j / \text{faced}_j$ pools every fact of every run by the number of compactions it has faced, which is exactly that model's estimate; the small departures are sampling noise over <V of="compaction.studies.compact-0.25-1500.survival.0.faced" fmt="int" /> first compactions.
+
+Re-retrieval turns a lost fact into a cost instead of an error: one search and up to three reads, each paying for a window of up to $B$ tokens, so recall goes back to 1 while the input cost rises by roughly (lost facts) $\times$ (reads per fact) $\times B$.
+
+</Layer>
+
+<Layer kind="code">
+
+The lossy summariser, cut from the vendored engine (`windowRun`): every line of the new summary, old and new, is kept with probability $1 - \ell$.
+
+```ts
+if (summariser === "lossy") {
+  const kept: number[] = [];
+  for (const f of lines) {
+    const keepIt = rng.random() >= loss;
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- [Agent Harnesses Explained, the context budget](https://agent-harnesses-explained.vercel.app/learn/03-the-context-budget): truncation, clipping and summarising compaction inside a real harness loop, with the summary written by a recorded model.
+- RAG series: [iterative retrieval loops](https://brendanjameslynskey.github.io/RAG_05_Agentic_RAG_Patterns/#slide-06), the agentic pattern behind re-retrieval.
+- The [agents](https://brendanjameslynskey.github.io/LLM_Hub_Agents/) slide series.
+
+</Callout>

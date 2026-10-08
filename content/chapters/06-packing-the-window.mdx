@@ -1,0 +1,59 @@
+<PackingWidget>
+  <Eq
+    label="Packing is a 0/1 knapsack: choose chunks to maximise their total value within the budget B; a chunk's value is the nDCG gain of its reranked position; the position curve p(x) is the illustrative chance the model uses an answer at relative position x"
+    tex="\begin{gathered} \max_{x \in \{0,1\}^n} \sum_i \htmlClass{hl-value}{v_i}\, x_i \;\; \text{s.t.} \;\; \sum_i \htmlClass{hl-weight}{w_i}\, x_i \le \htmlClass{hl-budget}{B} \\ \htmlClass{hl-value}{v_i = 1 / \log_2(i+1)} \\ \htmlClass{hl-pos}{p(x)} = \begin{cases} m + (s - m)\big(\frac{x_0 - x}{x_0}\big)^2 & x \le x_0 \\ m + (e - m)\big(\frac{x - x_0}{1 - x_0}\big)^2 & x > x_0 \end{cases} \end{gathered}"
+  />
+</PackingWidget>
+
+<Layer kind="concept">
+
+Retrieval hands the agent a ranked list; the window takes only so many tokens. **Packing** decides which chunks go in and in what order. The animation takes one question's <V of="packing.eval.candidates" fmt="int" /> reranked candidates ([chapter 4](/learn/04-hybrid-and-reranking)), each with a **weight** (its token count) and a **value** (the gain nDCG gives its rank, $1/\log_2(i+1)$: 1 for the top chunk, 0.63 for the second, falling slowly), and fills a budget $B$ three ways:
+
+- **Top**: take chunks in reranked order and skip any that no longer fits. This is what most pipelines do.
+- **Density**: the same, but in order of value per token, the textbook greedy approximation to the knapsack. Short, middling chunks jump the queue.
+- **Optimal**: dynamic programming over integer budgets finds the set with the most total value. The animation shows it row by row: the best value reachable within $B$ using the first $i$ candidates.
+
+Measured over all 200 questions at $B = 512$ tokens, the answer is in the window for <V of="packing.eval.results.512.top.answered" fmt="pct1" /> of questions with **top**, <V of="packing.eval.results.512.density.answered" fmt="pct1" /> with density and <V of="packing.eval.results.512.optimal.answered" fmt="pct1" /> with the optimal packing, even though the optimal set carries the most value (<V of="packing.eval.results.512.optimal.value" fmt="f3" /> against <V of="packing.eval.results.512.top.value" fmt="f3" />). The knapsack is optimal for the objective it is given, and "sum of rank gains" rewards two mediocre chunks over one excellent one. The value has to be right before the solver matters. At <V of="packing.eval.budgets.0" fmt="int" /> tokens, roughly one chunk, the gap is widest: <V of="packing.eval.results.256.top.answered" fmt="pct1" /> against <V of="packing.eval.results.256.density.answered" fmt="pct1" /> for density. At 1,024 tokens all three find the answer for at least <V of="packing.eval.results.1024.optimal.answered" fmt="pct1" /> of questions.
+
+**Where to put it.** Liu et al. measured that models use information at the start or the end of a long input better than in the middle ([_Lost in the Middle_, arXiv:2307.03172](https://arxiv.org/abs/2307.03172)): accuracy against position is U-shaped. The engine models that as two parabolas, $p = $ <V of="packing.position.start" fmt="num" /> at the start, <V of="packing.position.middle" fmt="num" /> at the trough, <V of="packing.position.end" fmt="num" /> at the end (illustrative numbers, not the paper's), and lays the packed set out four ways. At 1,024 tokens with the top packer, the mean $p$ at the answer is <V of="packing.eval.results.1024.top.ends" fmt="f3" /> with **ends** (best chunk first, second best last, weakest in the middle), <V of="packing.eval.results.1024.top.best-first" fmt="f3" /> best-first, <V of="packing.eval.results.1024.top.best-last" fmt="f3" /> best-last and <V of="packing.eval.results.1024.top.middle" fmt="f3" /> with the best chunk buried in the middle. With one chunk there is no "where": at 256 tokens every placement is the same.
+
+</Layer>
+
+<Callout kind="illustrative">
+
+The **position curve's parameters are illustrative**: shaped like the U that Liu et al. report, with numbers chosen for the picture; theirs depend on the model, the task and the number of documents. A chunk's value is a **rank gain**, not a probability of holding the answer. The budgets (256 to 2,048 tokens) are small so that packing bites; the candidates, their token counts and the reranker's order are real (Qwen2.5 tokens, the recorded cross-encoder).
+
+</Callout>
+
+<Layer kind="maths">
+
+With $n$ candidates of integer weights $w_i$ and values $v_i$, the dynamic programme fills a table $\text{best}[i][c]$, the most value from the first $i$ candidates within $c$ tokens:
+$\text{best}[i][c] = \max\big(\text{best}[i-1][c],\ \text{best}[i-1][c - w_i] + v_i\big)$, in $O(nB)$ time: here $20 \times 1{,}025$ cells for $B = 1{,}024$. Walking back from $\text{best}[n][B]$ recovers the set. The density greedy has no such guarantee: one long, valuable chunk can lose to several short ones that fill the budget badly.
+
+Placement is a separate choice. If the answer chunk occupies tokens $[a, a + w)$ of a packed context of $T$ tokens, its position is $x = (a + w/2)/T$, and the chance it is used is $p(x)$. "Ends" puts the highest-value chunks at the smallest and largest $x$, where $p$ is highest.
+
+</Layer>
+
+<Layer kind="code">
+
+The optimal packer's recurrence, cut from the vendored engine (`knapsackTable`): each row copies the previous one and takes item $i$ only where that strictly beats leaving it out.
+
+```ts
+for (let c = w; c <= budget; c++) {
+  const t = prev[c - w]! + v;
+  if (t > row[c]!) {
+    row[c] = t;
+    tk[c] = 1;
+  }
+}
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- RAG series: [multi-stage cascades, recall against precision per stage](https://brendanjameslynskey.github.io/RAG_03_Hybrid_Search_and_Reranking/#slide-06) and [cascade depth, the (k, quality, latency) frontier](https://brendanjameslynskey.github.io/RAG_08_Two_Step_Retrieval_Architecture/#slide-08).
+- [Agent Harnesses Explained, the context budget](https://agent-harnesses-explained.vercel.app/learn/03-the-context-budget), for the same budget seen from inside a harness loop.
+- Next: what to do when the window fills up anyway, [compaction](/learn/07-compaction-and-summarisation).
+
+</Callout>

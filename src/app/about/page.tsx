@@ -5,6 +5,7 @@
 import Link from "next/link";
 
 import VENDORED from "@/lib/engine/vendor/VENDORED.json";
+import ENGINE_DATA from "@/lib/engine/vendor/engine_data.json";
 import { formatValue, lookup } from "@/lib/ctx/values";
 import {
   DECODER_URL,
@@ -42,10 +43,11 @@ export default function AboutPage(): JSX.Element {
         <p>
           Agent Context Explained is about context engineering: what goes into
           an agent&apos;s context window, and how an agent remembers beyond it.
-          These first chapters cover the window as working memory and the
-          retrieval that fills it: BM25, dense retrieval, hybrid fusion and
-          reranking, and chunking. Every chapter is built around an animation.
-          It is the third of a family of agent sites, after{" "}
+          Nine chapters cover the window as working memory, the retrieval that
+          fills it (BM25, dense retrieval, hybrid fusion and reranking,
+          chunking), packing a token budget, compaction, memory across sessions,
+          and when a long prompt beats retrieval. Every chapter is built around
+          an animation. It is the third of a family of agent sites, after{" "}
           <a href={HARNESSES_URL} className={A}>
             Agent Harnesses Explained
           </a>{" "}
@@ -94,7 +96,8 @@ export default function AboutPage(): JSX.Element {
           {v("corpus.rerank_pairs", "int")} question–chunk pairs. From those
           files the engine recomputes everything else: chunk boundaries, BM25,
           cosine similarities, fusion, reranked orders, recall@k, MRR and nDCG,
-          and the window task. The only numbers that need the unquantised
+          the window task, packing, compaction, memory across sessions and the
+          long-context costs. The only numbers that need the unquantised
           vectors, the float32 baselines, were recorded by the offline run and
           are labelled as such.
         </p>
@@ -105,8 +108,8 @@ export default function AboutPage(): JSX.Element {
           <a href={ENGINE_URL} className={A}>
             Agent_Loop_Sim
           </a>
-          &apos;s context module (engine 1.4.0): a Python reference with a
-          TypeScript port, vendored here at commit{" "}
+          &apos;s context module (engine {ENGINE_DATA.version}): a Python
+          reference with a TypeScript port, vendored here at commit{" "}
           <code>{VENDORED.commit.slice(0, 7)}</code> with every file&apos;s
           SHA-256 recorded. It runs in a Web Worker. Agreement between the two
           languages is exact, with no tolerance: every chunk, score, ranking,
@@ -147,7 +150,22 @@ export default function AboutPage(): JSX.Element {
           <li>
             The window task of chapter 1: a scripted agent, budgets scaled down
             to 1,000–3,000 tokens, and a summariser that keeps every fact by
-            construction.
+            construction (a lossy option drops each line with an illustrative
+            probability); the lossy summariser&apos;s loss rates in chapter 7.
+          </li>
+          <li>
+            Chapter 6&apos;s position curve (shaped like the U of &ldquo;Lost in
+            the Middle&rdquo;, with made-up numbers) and its chunk values (a
+            rank gain, not a probability).
+          </li>
+          <li>
+            Chapter 8&apos;s agent, its importance ratings and its fact
+            extractor are scripted.
+          </li>
+          <li>
+            Chapter 9&apos;s prices are dated list prices; sets larger than the
+            corpus are hypothetical, latency is a round-number profile, and
+            long-prompt surcharges and model limits are not modelled.
           </li>
           <li>
             The sentence splitter is a simple rule; the semantic chunker&apos;s

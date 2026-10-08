@@ -36,6 +36,27 @@ export const KIND_NAME: Record<string, string> = {
   summary: "Summary",
 };
 
+/** What a memory holds (chapter 8): a raw read or episode, a note line, an extracted fact. */
+export const MEMORY_COLOUR: Record<string, string> = {
+  read: OKABE_ITO.orange,
+  chunk: OKABE_ITO.orange,
+  note: OKABE_ITO.blue,
+  fact: OKABE_ITO.green,
+  none: "#a3a3a3",
+};
+
+/** One colour per way of answering over a document set (chapter 9). */
+export const STRATEGY_COLOUR: Record<string, string> = {
+  long: OKABE_ITO.orange,
+  "long+cache": OKABE_ITO.purple,
+  rag: OKABE_ITO.green,
+};
+export const STRATEGY_NAME: Record<string, string> = {
+  long: "Long prompt",
+  "long+cache": "Long prompt, cached",
+  rag: "Retrieval",
+};
+
 /** One colour per retrieval stage. */
 export const STAGE_COLOUR: Record<string, string> = {
   bm25: OKABE_ITO.orange,

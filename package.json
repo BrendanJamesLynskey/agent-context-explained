@@ -2,7 +2,7 @@
   "name": "agent-context-explained",
   "version": "0.1.0",
   "private": true,
-  "description": "An animated explainer of context engineering for agents: the window as working memory, BM25, dense retrieval, hybrid fusion, reranking and chunking, measured on a labelled SQuAD subset and driven by a tested engine.",
+  "description": "An animated explainer of context engineering for agents: the window as working memory, BM25, dense retrieval, hybrid fusion, reranking, chunking, packing, compaction, memory and long context against retrieval, measured on a labelled SQuAD subset and driven by a tested engine.",
   "license": "MIT",
   "author": "Brendan Lynskey <https://github.com/BrendanJamesLynskey>",
   "engines": {

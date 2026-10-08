@@ -1,0 +1,56 @@
+<MemoryWidget>
+  <Eq
+    label="Episodic memory scores each stored episode by recency, importance and relevance, each min-max normalised over the store, and puts the top k in the call; recency decays by 0.995 per hour since the episode was last retrieved"
+    tex="\begin{gathered} \htmlClass{hl-score}{\text{score}(m)} = \widehat{\htmlClass{hl-rec}{\text{rec}}}(m) + \widehat{\htmlClass{hl-imp}{\text{imp}}}(m) + \widehat{\htmlClass{hl-rel}{\text{rel}}}(m, q) \\ \htmlClass{hl-rec}{\text{rec}(m) = 0.995^{\,\Delta h}} \qquad \htmlClass{hl-rel}{\text{rel}(m, q) = \cos(\mathbf{e}_m, \mathbf{e}_q)} \\ \text{cost} = \htmlClass{hl-read}{\sum_{\text{probes}} |\text{memory in call}|} + \htmlClass{hl-write}{\sum_{\text{writes}} |\text{write call}|} \end{gathered}"
+  />
+</MemoryWidget>
+
+<Layer kind="concept">
+
+The window is gone when a session ends. Whatever the agent should know next time has to be **written** somewhere and **read** back. The animation runs <V of="memory.plan.sessions.length" fmt="int" /> sessions of three research questions each. At the start of every later session the agent is **probed**: each question it researched comes back once, one to three sessions later, and a few **neighbour** questions ask about something that was in a chunk it read but was never asked. A final session holds probes only. That makes <V of="memory.runs.none.probes" fmt="int" /> probes: <V of="memory.runs.none.repeat.1" fmt="int" /> repeats and <V of="memory.runs.none.neighbour.1" fmt="int" /> neighbours. A probe is **recalled** when the memory the agent puts in that call holds the answer.
+
+- **None**: nothing carries over, so nothing is recalled.
+- **Transcript**: keep every read and load it all. Every probe is recalled (<V of="memory.runs.transcript.recalled" fmt="int" /> of 22), but each call carries the whole history: <V of="memory.runs.transcript.read_tokens" fmt="int" /> memory tokens read in total, and growing with every session.
+- **Scratchpad**: a notes file, one "question → answer" line per question answered, loaded whole. It is small (<V of="memory.runs.scratchpad.stored_tokens" fmt="int" /> tokens at the end) and recalls every repeat (<V of="memory.runs.scratchpad.repeat.0" fmt="int" /> of 18), but **no** neighbour: notes keep the answers to the questions that were asked, not the text around them. Capped at 128 tokens, the oldest notes are forgotten and recall falls to <V of="memory.runs.scratchpad-cap.recalled" fmt="int" />.
+- **Episodic**: every read is an episode with a time and an importance rating. At a probe the top three by recency + importance + relevance go in the call, the scoring of _Generative Agents_ ([Park et al., arXiv:2304.03442](https://arxiv.org/abs/2304.03442)), whose recency decays by 0.995 per hour since an episode was last retrieved. A chunk read twice is **consolidated** into one episode, so the store holds <V of="memory.runs.episodic.items" fmt="int" /> episodes for 22 reads. It recalls <V of="memory.runs.episodic.recalled" fmt="int" /> of 22 for <V of="memory.runs.episodic.read_tokens" fmt="int" /> tokens. Kept to at most eight episodes (forgetting the lowest recency + importance), it recalls <V of="memory.runs.episodic-cap.recalled" fmt="int" />.
+- **Semantic**: a scripted extractor turns each read into **facts**: the sentence that answered the question and the chunk's first sentence. At a probe the three facts closest to the question by cosine go in the call. It recalls <V of="memory.runs.semantic.recalled" fmt="int" /> of 22, as many as the episodes, for <V of="memory.runs.semantic.read_tokens" fmt="int" /> tokens, under a fifth as many, because a fact is a sentence and an episode is a chunk. The price is paid at write time: extraction reads every chunk once more (<V of="memory.runs.semantic.write_tokens" fmt="int" /> tokens of model calls).
+
+The scatter under the animation puts every policy on one chart, with $k$ (items per probe) swept for the two retrieved memories: semantic memory with $k = 1$ recalls <V of="memory.sweep.semantic k=1.recalled" fmt="int" /> for <V of="memory.sweep.semantic k=1.read_tokens" fmt="int" /> tokens; episodic with $k = 5$ recalls <V of="memory.sweep.episodic k=5.recalled" fmt="int" /> for <V of="memory.sweep.episodic k=5.read_tokens" fmt="int" />. Recall rises with tokens read, and the cheapest point at a given recall is the memory that stores the smallest unit that still holds the answer.
+
+</Layer>
+
+<Callout kind="illustrative">
+
+The agent, its **importance ratings** (8 for a read that answered its question, 3 for another read, 5 for a chunk's first sentence) and its **extractor** are scripted: a model would rate and extract less predictably. Session times are a day apart and reads an hour apart, so the 0.995-per-hour decay is the paper's but the clock is ours. The probes, chunks, sentences and embeddings are real (the corpus, MiniLM int8 vectors), and every token count is Qwen2.5's. "Write tokens" counts the model calls that would write the memory; a real system may batch or skip them.
+
+</Callout>
+
+<Layer kind="maths">
+
+For episodic memory each component is min-max normalised over the store at the time of the probe, $\hat{x} = (x - \min x)/(\max x - \min x)$, and the three are added with equal weights, as in the paper. Recency is $\text{rec} = 0.995^{\Delta h}$ with $\Delta h$ the hours since the episode was last retrieved, so retrieving a memory refreshes it: memories that keep being useful stay near the top. Forgetting with a cap of $M$ items evicts $\arg\min(\widehat{\text{rec}} + \widehat{\text{imp}})$ until the store fits.
+
+A probe's read cost is the size of what goes in the call: the whole store for a transcript or a scratchpad ($O(\text{history})$ per probe), $k$ items for retrieved memories ($O(k \cdot \text{item size})$). Over $P$ probes the transcript's cost grows with $P \times$ history, which is why its total, <V of="memory.runs.transcript.read_tokens" fmt="int" /> tokens, dwarfs the others.
+
+</Layer>
+
+<Layer kind="code">
+
+Episodic retrieval, cut from the vendored engine (`memoryRun`): recency, importance and relevance, each normalised, added, and the top $k$ taken.
+
+```ts
+const rel = store.map((it) => cosine(qv[p.q]!, cv[it.ref]!));
+const rec = norm(store.map((it) => recency(now - it.t)));
+const imp = norm(store.map((it) => it.imp));
+const rn = norm(rel);
+sc = store.map((_, i) => rec[i]! + imp[i]! + rn[i]!);
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- The [agents](https://brendanjameslynskey.github.io/LLM_Hub_Agents/) slide series, and [Introduction to LangGraph](https://brendanjameslynskey.github.io/Introduction_to_LangGraph/) for state, persistence and checkpointing in a real framework.
+- _MemGPT_ ([Packer et al., arXiv:2310.08560](https://arxiv.org/abs/2310.08560)) treats the window as main memory and pages facts in and out of external storage, an operating-system view of the same trade-off.
+- [Agent Harnesses Explained, the context budget](https://agent-harnesses-explained.vercel.app/learn/03-the-context-budget), and the [RAG and retrieval](https://brendanjameslynskey.github.io/LLM_Hub_RAG_Retrieval/) series for the retrieval underneath episodic and semantic memory.
+
+</Callout>

@@ -43,3 +43,19 @@ export const ChunkWidget = dynamic(() => import("./ChunkWidget"), {
   ssr: false,
   loading: loading("animation"),
 });
+export const PackingWidget = dynamic(() => import("./PackingWidget"), {
+  ssr: false,
+  loading: loading("animation"),
+});
+export const CompactionWidget = dynamic(() => import("./CompactionWidget"), {
+  ssr: false,
+  loading: loading("animation"),
+});
+export const MemoryWidget = dynamic(() => import("./MemoryWidget"), {
+  ssr: false,
+  loading: loading("animation"),
+});
+export const CostWidget = dynamic(() => import("./CostWidget"), {
+  ssr: false,
+  loading: loading("animation"),
+});

@@ -54,3 +54,60 @@ export function chunkCaption(view: Obj, s: ChunkStep): string {
     (cut ? `; cuts through ${cut} answer${cut === 1 ? "" : "s"}` : "")
   );
 }
+
+export function memoryCaption(f: Obj): string {
+  const probes = f.probes as number;
+  return probes
+    ? `${f.caption as string}. Recalled ${f.recalled as number} of ${probes} probe${probes === 1 ? "" : "s"} so far; ${fmtInt(f.read as number)} memory tokens read.`
+    : `${f.caption as string}.`;
+}
+
+/** The long-context chapter's step: question i of the run, with each strategy's running total. */
+export function costCaption(
+  run: Obj,
+  i: number,
+  fmt: (usd: number) => string,
+): string {
+  const s = run.strategies as Record<string, Obj>;
+  const q = i + 1;
+  return (
+    `question ${q} of ${run.questions as number}: ` +
+    `long prompt ${fmt(s.long!.cum[i] as number)}, ` +
+    `cached ${fmt(s["long+cache"]!.cum[i] as number)}` +
+    ((s["long+cache"]!.cached[i] as number) > 0
+      ? ` (${fmtInt(s["long+cache"]!.cached[i] as number)} tokens read from the cache)`
+      : " (this call writes the cache)") +
+    `, top-${run.k as number} retrieval ${fmt(s.rag!.cum[i] as number)} so far`
+  );
+}
+
+/**
+ * The packing animation's caption after `step` of the packer's steps (step 0: before the first;
+ * the last: the final set, placed).
+ */
+export function packingCaption(
+  view: Obj,
+  packer: string,
+  placement: string,
+  step: number,
+): string {
+  const pk = view.packers[packer] as Obj;
+  const steps = pk.steps as Obj[];
+  const cands = view.candidates as Obj[];
+  const B = view.budget as number;
+  if (step === steps.length) {
+    const placed = view.placed[packer][placement] as Obj;
+    const answerIn = (pk.chosen as number[]).some(
+      (i) => cands[i]!.relevant as boolean,
+    );
+    return (
+      `${packer} packs ${(pk.chosen as number[]).length} chunks, ${fmtInt(pk.tokens as number)} of ${fmtInt(B)} tokens, value ${(pk.value as number).toFixed(2)}; ` +
+      (answerIn
+        ? `placed ${placement}, the answer sits where p = ${(placed.p as number).toFixed(2)}`
+        : "the answer is not in the window")
+    );
+  }
+  if (step === 0)
+    return `${packer}: ${cands.length} reranked candidates for a ${fmtInt(B)}-token budget; press play`;
+  return steps[step - 1]!.caption as string;
+}
