@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/BrendanJamesLynskey/Agent_Loop_Sim",
-  "commit": "df84c0e8be21f084116f708f5b049e3e13e0db36",
-  "committed": "2026-10-08T15:50:07+01:00",
+  "commit": "ce5c4067f9ee286ca7bf6183d59cfd4a438b5dad",
+  "committed": "2026-10-08T17:41:41+01:00",
   "files": {
     "src/lib/engine/vendor/accounting.ts": {
       "from": "ts/src/accounting.ts",
@@ -25,11 +25,19 @@
     },
     "src/lib/engine/vendor/context/index.ts": {
       "from": "ts/src/context/index.ts",
-      "sha256": "cbd421c9b918aafe53f1bebddbff5c602fed289197008f1dad5ddf5aa80bb871"
+      "sha256": "50b6cadeab0eb1475ad4d09c3df5969acd1e7fd3517ee1ba96bf76b4eb99fe64"
     },
     "src/lib/engine/vendor/context/mathx.ts": {
       "from": "ts/src/context/mathx.ts",
       "sha256": "84204053b7c358de09cb8ca2292245e66b16f28f3be46846953fde4a7f3b0b62"
+    },
+    "src/lib/engine/vendor/context/memory.ts": {
+      "from": "ts/src/context/memory.ts",
+      "sha256": "48caf526c1f124d74630f33029fd2ca887d97363045426e2cd076b27147a223e"
+    },
+    "src/lib/engine/vendor/context/packing.ts": {
+      "from": "ts/src/context/packing.ts",
+      "sha256": "df7f688ddfa0835d342b1013e1d5bae82584fa3b1abb98508b0ef2bf01817d7b"
     },
     "src/lib/engine/vendor/context/retrieval.ts": {
       "from": "ts/src/context/retrieval.ts",
@@ -38,6 +46,10 @@
     "src/lib/engine/vendor/context/text.ts": {
       "from": "ts/src/context/text.ts",
       "sha256": "ead45ab60535f0d17738c52cfb3bb5a1ce15839228a0a615d99813043d1cf8e7"
+    },
+    "src/lib/engine/vendor/context/tradeoff.ts": {
+      "from": "ts/src/context/tradeoff.ts",
+      "sha256": "4ec0d3732364ad1b19ead95fdc1105e0bae6b4aec5701ed659d990021af4f30c"
     },
     "src/lib/engine/vendor/context/vectors.ts": {
       "from": "ts/src/context/vectors.ts",
@@ -49,7 +61,7 @@
     },
     "src/lib/engine/vendor/context/window.ts": {
       "from": "ts/src/context/window.ts",
-      "sha256": "f7af9b24c6fe264f665982b19770ecde75b5ad283308a3ed05f52c447079b3c7"
+      "sha256": "73511454559c94ab4b81b34bb41e63dd797987bc59a82e9a739c475845e602e8"
     },
     "src/lib/engine/vendor/data.ts": {
       "from": "ts/src/data.ts",
@@ -57,7 +69,7 @@
     },
     "src/lib/engine/vendor/engine_data.json": {
       "from": "ts/src/engine_data.json",
-      "sha256": "f7ae97b25a42c9bff6a0df0decf2b2a00bbe51791066693abb4697c1822a895a"
+      "sha256": "76f81a98abbaad153097339dfe29edb1a826746ddf82f08924e72402c4860d14"
     },
     "src/lib/engine/vendor/harness.ts": {
       "from": "ts/src/harness.ts",
@@ -121,7 +133,7 @@
     },
     "src/lib/engine/vendor/protocols_data.json": {
       "from": "ts/src/protocols_data.json",
-      "sha256": "144288241c604b81e9bb5d6fa68ee923c3bd388c45c334c4b5d3ee199a8dea1b"
+      "sha256": "7bb80f0af538baa023927524a52b90cb2bed3f3b9aee55dfe23ea54ea8170cc9"
     },
     "src/lib/engine/vendor/rng.ts": {
       "from": "ts/src/rng.ts",
@@ -201,11 +213,19 @@
     },
     "tests/fixtures/context_fixtures.json": {
       "from": "fixtures/context_fixtures.json",
-      "sha256": "156be2a9b8fc09522d1f3302584b9956f26421340916f4e2a82dbba842ebde4d"
+      "sha256": "7b448cb2f59153df3855cbaa96a38a5c0e11ee297f9edd7f29ecd8d48ba12088"
     },
     "src/data/context_results.md": {
       "from": "fixtures/context_results.md",
-      "sha256": "b2eb60d205431938fdc1a1d8c7f86b88b21cae5e8d230100ea8839a4aa84ba3c"
+      "sha256": "825c6b76a56f064f0217bb5e5a5b3f875ec6deec51429c54d84e9b545d00e079"
+    },
+    "tests/fixtures/context2_fixtures.json": {
+      "from": "fixtures/context2_fixtures.json",
+      "sha256": "67cd1c90a62d7db1e205bc974ced6354dc38e499ca348e1df05cf265ad91b60e"
+    },
+    "src/data/context2_results.md": {
+      "from": "fixtures/context2_results.md",
+      "sha256": "e9c0a9640c08d482b33dd94f7ed11135ff318ddb57149334e2ea6d1c99cca4f6"
     }
   }
 }

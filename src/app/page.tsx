@@ -41,8 +41,9 @@ export default function HomePage(): JSX.Element {
           <p className="max-w-2xl text-lg text-neutral-600 dark:text-neutral-300">
             A model knows only what is in its context window.{" "}
             <strong>Context engineering</strong> decides what goes in: which
-            chunks of which documents, found how, cut where, and what to drop or
-            summarise when the window fills. Every claim here is measured, not
+            chunks of which documents, found how, cut where, packed in what
+            order, what to drop or summarise when the window fills, and what to
+            remember between sessions. Every claim here is measured, not
             asserted: on {v("corpus.articles", "int")} articles of{" "}
             <a href={SQUAD_URL} className={LINK}>
               SQuAD

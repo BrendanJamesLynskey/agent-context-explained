@@ -41,6 +41,30 @@ export const SECTIONS = [
     summary:
       "One text cut three ways, fixed, recursive and semantic: where the boundaries fall, which answers they cut in two, and what each chunking does to recall.",
   },
+  {
+    slug: "06-packing-the-window",
+    title: "Packing the window",
+    summary:
+      "Which retrieved chunks fit a token budget, as a knapsack solved greedily and exactly, and where to put them: an illustrative lost-in-the-middle curve and four placements, measured on 200 questions.",
+  },
+  {
+    slug: "07-compaction-and-summarisation",
+    title: "Compaction and summarisation",
+    summary:
+      "A 36-question task compacted by a perfect and a lossy summariser: which facts survive n compactions, measured over 20 seeded runs, and what searching again costs.",
+  },
+  {
+    slug: "08-agent-memory",
+    title: "Agent memory",
+    summary:
+      "Six sessions and the probes between them: transcript, scratchpad, episodic and semantic memory, with forgetting and consolidation, as facts recalled against tokens spent.",
+  },
+  {
+    slug: "09-long-context-or-retrieval",
+    title: "Long context or retrieval?",
+    summary:
+      "Fifty questions over a document set of up to a million tokens: the whole set in every prompt, with and without the prompt cache, against the top k chunks, in dollars, seconds and answers found.",
+  },
 ] as const;
 
 export type SectionSlug = (typeof SECTIONS)[number]["slug"];

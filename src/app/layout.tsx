@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s · Agent Context Explained",
   },
   description:
-    "What goes into an agent's context window and how it remembers beyond it: BM25, dense retrieval, hybrid fusion, reranking and chunking measured on a labelled corpus, and the window as working memory, each animated by a tested engine.",
+    "What goes into an agent's context window and how it remembers beyond it: BM25, dense retrieval, hybrid fusion, reranking and chunking measured on a labelled corpus, packing, compaction, memory across sessions, and long context against retrieval, each animated by a tested engine.",
 };
 
 export default function RootLayout({

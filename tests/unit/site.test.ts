@@ -120,7 +120,7 @@ describe("palette", () => {
 
 describe("chapters and site", () => {
   it("catalogue", async () => {
-    expect(SECTIONS).toHaveLength(5);
+    expect(SECTIONS).toHaveLength(9);
     expect(isValidSlug("02-lexical-retrieval")).toBe(true);
     expect(isValidSlug("99-nope")).toBe(false);
     expect(getSectionMeta("05-chunking").title).toBe("Chunking");

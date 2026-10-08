@@ -13,7 +13,7 @@ import { RAG_HUB } from "@/lib/site";
 export const metadata = {
   title: "Learn",
   description:
-    "Chapters on context engineering: the window as working memory, BM25, dense retrieval, hybrid fusion and reranking, and chunking, each built around an animation driven by a tested engine and measured on a labelled corpus.",
+    "Nine chapters on context engineering: the window as working memory, BM25, dense retrieval, hybrid fusion and reranking, chunking, packing the window, compaction, agent memory, and long context against retrieval, each built around an animation driven by a tested engine and measured on a labelled corpus.",
 };
 
 export default function LearnIndex(): JSX.Element {

@@ -10,7 +10,11 @@
         "http://localhost:3000/learn/02-lexical-retrieval",
         "http://localhost:3000/learn/03-dense-retrieval",
         "http://localhost:3000/learn/04-hybrid-and-reranking",
-        "http://localhost:3000/learn/05-chunking"
+        "http://localhost:3000/learn/05-chunking",
+        "http://localhost:3000/learn/06-packing-the-window",
+        "http://localhost:3000/learn/07-compaction-and-summarisation",
+        "http://localhost:3000/learn/08-agent-memory",
+        "http://localhost:3000/learn/09-long-context-or-retrieval"
       ],
       "numberOfRuns": 3
     },

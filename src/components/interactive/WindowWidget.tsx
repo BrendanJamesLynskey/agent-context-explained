@@ -34,6 +34,8 @@ const BUDGETS = ["1000", "1500", "2000", "3000"] as const;
 const POLICIES = ["unbounded", "truncate", "compact", "retrieve"] as const;
 type Budget = (typeof BUDGETS)[number];
 type Policy = (typeof POLICIES)[number];
+const SUMMARISERS = ["perfect", "lossy"] as const;
+type Summariser = (typeof SUMMARISERS)[number];
 
 export default function WindowWidget({
   children,
@@ -57,14 +59,17 @@ function Window({
 }): JSX.Element {
   const [budget, setBudget] = useState<Budget>("1500");
   const [policy, setPolicy] = useState<Policy>("truncate");
+  const [summariser, setSummariser] = useState<Summariser>("perfect");
   const [hover, setHover] = useState<string | null>(null);
   const font = useSvgFont(W);
   const fs = font.fs;
-  const run = data.runs[`${policy}-${budget}`] as Obj;
+  const lossy = policy === "compact" && summariser === "lossy";
+  const key = lossy ? `lossy-compact-${budget}` : `${policy}-${budget}`;
+  const run = data.runs[key] as Obj;
   const frames = run.frames as Obj[];
   const s = useStepper(frames.length, {
     stepMs: 900,
-    resetKey: `${policy}-${budget}`,
+    resetKey: key,
   });
   const f = frames[s.step]!;
   const task = data.task as Obj[];
@@ -295,6 +300,17 @@ function Window({
             options={POLICIES.map((p) => ({ value: p, label: p }))}
             onChange={setPolicy}
           />
+          {policy === "compact" && (
+            <Segmented
+              label="Summariser (lossy is illustrative)"
+              value={summariser}
+              options={SUMMARISERS.map((x) => ({
+                value: x,
+                label: x === "lossy" ? "lossy (25% loss)" : x,
+              }))}
+              onChange={setSummariser}
+            />
+          )}
         </>
       }
     />

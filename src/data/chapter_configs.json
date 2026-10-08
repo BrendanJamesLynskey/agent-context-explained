@@ -3,24 +3,39 @@
     "files": ["corpus.json"],
     "task": 12,
     "budgets": [1000, 1500, 2000, 3000],
-    "policies": ["unbounded", "truncate", "compact", "retrieve"]
+    "policies": ["unbounded", "truncate", "compact", "retrieve"],
+    "lossy": ["compact"]
   },
   "lexical": {
     "files": ["corpus.json"],
     "queries": [0, 17, 61, 140],
-    "free": ["when did the first crewed moon landing happen", "steam engine efficiency and condensers"],
+    "free": [
+      "when did the first crewed moon landing happen",
+      "steam engine efficiency and condensers"
+    ],
     "k1": [0.5, 1.2, 2.0],
     "b": [0, 0.75, 1],
     "evals": [[1.2, 0.75], [0.5, 0.75], [2.0, 0.75], [1.2, 0], [1.2, 1]]
   },
   "dense": {
-    "files": ["corpus.json", "emb-questions.json", "emb-recursive-256.json", "pca.json", "manifest.json"],
+    "files": [
+      "corpus.json",
+      "emb-questions.json",
+      "emb-recursive-256.json",
+      "pca.json",
+      "manifest.json"
+    ],
     "path": [0, 17, 61, 92, 140, 175, 38, 120],
     "k": 5,
     "precisions": ["int8", "int4", "binary"]
   },
   "hybrid": {
-    "files": ["corpus.json", "emb-questions.json", "emb-recursive-256.json", "rerank.json"],
+    "files": [
+      "corpus.json",
+      "emb-questions.json",
+      "emb-recursive-256.json",
+      "rerank.json"
+    ],
     "questions": [0, 17, 61, 92, 140, 175],
     "n": 20
   },
@@ -37,8 +52,56 @@
       "emb-semantic-256.json"
     ],
     "configs": ["fixed-256", "recursive-256", "semantic-256"],
-    "all": ["fixed-128", "fixed-256", "fixed-512", "fixed-256-o64", "recursive-256", "semantic-256"],
+    "all": [
+      "fixed-128",
+      "fixed-256",
+      "fixed-512",
+      "fixed-256-o64",
+      "recursive-256",
+      "semantic-256"
+    ],
     "article": 0,
     "excerpt": [4000, 7000]
+  },
+  "packing": {
+    "files": [
+      "corpus.json",
+      "emb-questions.json",
+      "emb-recursive-256.json",
+      "rerank.json"
+    ],
+    "questions": [0, 17, 61, 92, 140],
+    "budgets": [256, 512, 1024],
+    "eval_budgets": [256, 512, 1024, 2048]
+  },
+  "compaction": {
+    "files": ["corpus.json"],
+    "task": 36,
+    "budgets": [1500, 2000],
+    "losses": [0, 0.1, 0.25, 0.5],
+    "policies": ["compact", "compact+retrieve"],
+    "baselines": ["unbounded", "truncate"],
+    "seed": 1,
+    "seeds": 20,
+    "studies": ["compact"]
+  },
+  "memory": {
+    "files": [
+      "corpus.json",
+      "emb-questions.json",
+      "emb-recursive-256.json",
+      "emb-sentences.json"
+    ]
+  },
+  "tradeoff": {
+    "files": [
+      "corpus.json",
+      "emb-questions.json",
+      "emb-recursive-256.json",
+      "rerank.json"
+    ],
+    "sizes": [200000, 1000000],
+    "ks": [3, 5, 10, 20],
+    "questions": 50
   }
 }

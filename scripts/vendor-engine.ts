@@ -56,6 +56,10 @@ for (const p of list("src/agent_loop_sim/data/context"))
   );
 map["fixtures/context_fixtures.json"] = "tests/fixtures/context_fixtures.json";
 map["fixtures/context_results.md"] = "src/data/context_results.md";
+// engine 1.5: packing, compaction, memory, long context
+map["fixtures/context2_fixtures.json"] =
+  "tests/fixtures/context2_fixtures.json";
+map["fixtures/context2_results.md"] = "src/data/context2_results.md";
 
 const files: Record<string, { from: string; sha256: string }> = {};
 for (const [from, to] of Object.entries(map)) {

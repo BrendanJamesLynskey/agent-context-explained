@@ -4,9 +4,11 @@
     python scripts/make_fixtures.py --check  # fail if it is out of date (CI)
 
 For every chapter (src/data/chapter_configs.json), everything it animates and quotes, computed by
-the reference from the engine's shipped data: the window task under each budget and policy, BM25
-views and evaluations, nearest-neighbour frames at each precision, RRF and rerank frames, chunk
-boundaries and each chunking's metrics. tests/unit/frames.test.ts recomputes them with the vendored
+the reference from the engine's shipped data: the window task under each budget and policy (and
+with the lossy summariser), BM25 views and evaluations, nearest-neighbour frames at each precision,
+RRF and rerank frames, chunk boundaries and each chunking's metrics; packing views and the packing
+evaluation, the long task's compaction runs and studies, every memory run, and the long-context
+against retrieval grid. tests/unit/frames.test.ts recomputes them with the vendored
 TS port (src/lib/engine's runChapter) and requires equality; tests/e2e/frames.spec.ts checks the
 captions on the page.
 
@@ -26,7 +28,10 @@ from agent_loop_sim.context.corpus import DEFAULT, default_corpus, read_data
 from agent_loop_sim.context.evaluate import evaluate, relevant
 from agent_loop_sim.context.retrieval import B, K1, RRF_K, Retriever
 from agent_loop_sim.context.vectors import nbytes
-from agent_loop_sim.context.window import task_questions, window_run
+from agent_loop_sim.context import memory as M
+from agent_loop_sim.context import packing as P
+from agent_loop_sim.context import tradeoff as T
+from agent_loop_sim.context.window import compaction_study, task_questions, window_run
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "tests/fixtures/site_fixtures.json"
@@ -64,6 +69,10 @@ def texts_of(r: Retriever, ids) -> dict:
     return {str(c): chunk_info(r, c) for c in sorted(ids)}
 
 
+def summary_of(w: dict) -> dict:
+    return {k: v for k, v in w.items() if k != "frames"}
+
+
 def eval_summary(e: dict) -> dict:
     return {"config": e["config"], "method": e["method"], "params": e["params"], "lost": e["lost"], "mean": e["mean"]}
 
@@ -82,7 +91,53 @@ def run_chapter(chapter: str, cfg: dict) -> dict:
     if chapter == "window":
         task = task_questions(r, cfg["task"])
         runs = {f"{p}-{b}": window_run(r, task, b, p) for b in cfg["budgets"] for p in cfg["policies"]}
+        for b in cfg["budgets"]:
+            for p in cfg["lossy"]:
+                runs[f"lossy-{p}-{b}"] = window_run(r, task, b, p, "lossy")
         return {"task": [question_info(qi) for qi in task], "runs": runs}
+    if chapter == "packing":
+        pviews, ids = {}, set()
+        for qi in cfg["questions"]:
+            for b in cfg["budgets"]:
+                v = P.packing_view(r, qi, b)
+                cands = v["candidates"]
+                placed = {}
+                for p in P.PACKERS:
+                    ch = v["packers"][p]["chosen"]
+                    placed[p] = {}
+                    for pl in P.PLACEMENTS:
+                        order = P.place(cands, ch, pl)
+                        placed[p][pl] = {"order": order, "positions": P.positions(cands, order) if order else [],
+                                         "p": P.answer_p(cands, order) if order else 0}
+                pviews[f"{qi}-{b}"] = dict(v, placed=placed)
+                ids |= {c["chunk"] for c in v["candidates"]}
+        return {"questions": [question_info(qi) for qi in cfg["questions"]], "views": pviews,
+                "eval": P.packing_eval(r, cfg["eval_budgets"]), "curve": P.position_curve(), "position": P.POSITION,
+                "chunks": {str(c): {"chunk": c, "title": C.articles[r.chunks[c]["article"]]["title"], "tokens": r.chunks[c]["tokens"]}
+                           for c in sorted(ids)}}
+    if chapter == "compaction":
+        task = task_questions(r, cfg["task"])
+        runs, baselines, studies = {}, {}, {}
+        seeds = list(range(1, cfg["seeds"] + 1))
+        for b in cfg["budgets"]:
+            for p in cfg["baselines"]:
+                baselines[f"{p}-{b}"] = summary_of(window_run(r, task, b, p))
+            for p in cfg["policies"]:
+                for loss in cfg["losses"]:
+                    runs[f"{p}-{loss}-{b}"] = (window_run(r, task, b, p, "lossy", loss, cfg["seed"]) if loss
+                                               else window_run(r, task, b, p))
+                    if loss and p in cfg["studies"]:
+                        studies[f"{p}-{loss}-{b}"] = compaction_study(r, task, b, p, loss, seeds)
+        return {"task": [question_info(qi) for qi in task], "runs": runs, "baselines": baselines, "studies": studies}
+    if chapter == "memory":
+        plan = M.memory_plan(r)
+        runs = {name: M.memory_run(r, p, plan, name) for name, p in M.POLICIES.items()}
+        sweep = {name: summary_of(M.memory_run(r, p, plan, name)) for name, p in M.SWEEP}
+        qids = set(plan["learn"]) | {p["q"] for row in plan["probes"] for p in row}
+        return {"plan": plan, "runs": runs, "sweep": sweep, "questions": {str(qi): question_info(qi) for qi in sorted(qids)}}
+    if chapter == "tradeoff":
+        sizes = T.measured_sizes(r)
+        return T.tradeoff(r, [sizes["corpus"]] + cfg["sizes"], cfg["ks"], cfg["questions"])
     if chapter == "lexical":
         qs = [C.questions[qi]["question"] for qi in cfg["queries"]]
         return {
