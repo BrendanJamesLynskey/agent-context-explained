@@ -1,0 +1,23 @@
+Agent Context Explained is released under the MIT licence (LICENSE).
+
+It vendors Agent_Loop_Sim (MIT, https://github.com/BrendanJamesLynskey/Agent_Loop_Sim) in
+src/lib/engine/vendor/, src/data/, public/tokenizer/ and public/context/, at the commit recorded in
+src/lib/engine/vendor/VENDORED.json. That includes:
+
+public/tokenizer/qwen2.5-merges.txt
+  The BPE merges of the Qwen2.5 tokenizer (Qwen/Qwen2.5-1.5B-Instruct on Hugging Face),
+  unchanged. Apache License 2.0; a copy is in public/tokenizer/QWEN2.5-LICENSE.
+
+public/context/corpus.json
+  Six articles and 200 questions (with their answers) from the SQuAD v1.1 development set
+  (https://rajpurkar.github.io/SQuAD-explorer/), by Pranav Rajpurkar, Jian Zhang, Konstantin
+  Lopyrev and Percy Liang, licensed under CC BY-SA 4.0
+  (https://creativecommons.org/licenses/by-sa/4.0/). Changes are listed in
+  public/context/manifest.json. This file is distributed under the same licence.
+
+public/context/emb-*.json, rerank.json, pca.json
+  Outputs of sentence-transformers/all-MiniLM-L6-v2 and cross-encoder/ms-marco-MiniLM-L6-v2
+  (both Apache License 2.0), run offline by Agent_Loop_Sim's scripts/build_context_data.py; the
+  models are not redistributed. public/context/manifest.json records revisions and SHA-256s.
+
+The chapters quote passages of the same SQuAD articles (CC BY-SA 4.0).

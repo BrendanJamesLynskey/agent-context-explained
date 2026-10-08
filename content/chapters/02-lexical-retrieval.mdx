@@ -1,0 +1,61 @@
+<Bm25Widget>
+  <Eq
+    label="BM25: over the query's terms, the inverse document frequency times a term-frequency factor that saturates with k1 and is normalised by the chunk's length with b"
+    tex="\begin{gathered} \text{score}(Q, D) = \sum_{q \in Q} \htmlClass{hl-idf}{\mathrm{IDF}(q)} \cdot \frac{\htmlClass{hl-tf}{f(q, D)}\,(k_1 + 1)}{\htmlClass{hl-tf}{f(q, D)} + k_1 \big(1 - b + b\, \htmlClass{hl-len}{\tfrac{|D|}{\text{avgdl}}}\big)} \\ \htmlClass{hl-idf}{\mathrm{IDF}(q) = \ln\!\Big(1 + \frac{N - n(q) + 0.5}{n(q) + 0.5}\Big)} \end{gathered}"
+  />
+</Bm25Widget>
+
+<Layer kind="concept">
+
+The oldest way to find the chunk that answers a question is still one of the best: count shared words, but count them carefully. **BM25** (Okapi BM25, Robertson and colleagues, refined through the TREC evaluations of the 1990s) scores a chunk $D$ for a query $Q$ by adding up, for each query term, three things:
+
+- **How rare the term is** (the IDF). A word in every chunk, such as "what", tells you little; a word in one chunk tells you a lot. In this corpus of <V of="lexical.n" fmt="int" /> chunks, "critical" appears in none and "s" (from "machine's") in 89, so they weigh about six and under one.
+- **How often it appears in the chunk**, with diminishing returns: the second occurrence adds less than the first, and the factor never exceeds $k_1 + 1$. $k_1$ sets how fast it saturates (the left curve).
+- **How long the chunk is**, relative to the average (<V of="lexical.avgdl" fmt="num" /> terms after stop words). A long chunk mentions more words by chance, so $b$ discounts its counts (the right curve); $b = 0$ ignores length, $b = 1$ normalises fully.
+
+The animation adds the query's terms one at a time; the bars are the eight best chunks' running scores, and a tick marks the chunk that holds the answer. Rare terms move the bars most. Stop words ("the", "of", "is"… Lucene's English list of 33) are dropped before scoring; there is no stemming, so "engines" and "engine" are different terms.
+
+Over all <V of="corpus.questions" fmt="int" /> questions, BM25 with the usual $k_1 = 1.2$, $b = 0.75$ ranks the answer's chunk first for <V of="lexical.evals.0.mean.recall@1" fmt="pct" /> of them and within the top five for <V of="hybrid.evals.bm25.mean.recall@5" fmt="pct" />. The parameters matter less than folklore suggests here: $k_1 = 0.5$ or $2$, $b = 0$ or $1$ all land within a point (<V of="lexical.evals.1.mean.recall@1" fmt="f3" />, <V of="lexical.evals.2.mean.recall@1" fmt="f3" />, <V of="lexical.evals.3.mean.recall@1" fmt="f3" />, <V of="lexical.evals.4.mean.recall@1" fmt="f3" /> at rank 1). SQuAD's questions were written by people reading the paragraph, so they reuse its words, which flatters lexical matching. Try the query about the first crewed Moon landing: "first", "moon" and "landing" are common in the Apollo article, so BM25's best chunk is about Kennedy's 1960 campaign, and the chunk that says Armstrong and Aldrin landed on 20 July 1969 is not in the top eight: it says "crew", not "crewed", and never "happen". Matching meaning rather than words is the next chapter.
+
+</Layer>
+
+<Callout kind="illustrative">
+
+Nothing here is illustrative: the corpus, the questions and their answers are SQuAD's, and every score is computed by the engine with the parameters shown. The analyser (letters and digits, lower case, Lucene's stop list, no stemming) is a deliberate, simple choice; production analysers stem and normalise more. The IDF is Lucene's non-negative form, computed with a shared transcription of the fdlibm logarithm so that the Python reference and this page agree to the last bit.
+
+</Callout>
+
+<Layer kind="maths">
+
+For a chunk of length $|D|$ and a term with frequency $f$, the factor $\frac{f (k_1 + 1)}{f + k_1 (1 - b + b |D| / \text{avgdl})}$ is $0$ at $f = 0$, rises with slope $(k_1+1)/(k_1 L)$ at first (where $L = 1 - b + b|D|/\text{avgdl}$), and tends to $k_1 + 1$ as $f \to \infty$. At $|D| = \text{avgdl}$, $L = 1$ whatever $b$ is: length normalisation only moves chunks longer or shorter than average. Doubling a chunk's length with $b = 0.75$ makes $L = 1.75$, so one occurrence counts $2.2/3.1 \approx 0.71$ of what it would in an average chunk ($k_1 = 1.2$).
+
+The IDF $\ln(1 + \frac{N - n + 0.5}{n + 0.5})$ falls from $\ln(1 + 2N + 1) \approx 6.04$ for a term in no chunk ($N = 208$) towards $\ln 1.002 \approx 0$ for a term in every chunk; the $1 +$ inside the logarithm (Lucene's form) keeps it from going negative for terms in more than half the chunks, which the classic form allowed.
+
+</Layer>
+
+<Layer kind="code">
+
+The IDF and one term's contribution, cut from the vendored engine (`retrieval.ts`):
+
+```ts
+idf(term: string): number {
+  const df = this.df.get(term) ?? 0;
+  return ln(1 + (this.n - df + 0.5) / (df + 0.5));
+}
+```
+
+```ts
+termScore(tf: number, dl: number, idf: number, k1: number, b: number): number {
+  return (idf * (tf * (k1 + 1))) / (tf + k1 * (1 - b + (b * dl) / this.avgdl));
+}
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- RAG series: [BM25, mechanics, IDF and length normalisation](https://brendanjameslynskey.github.io/RAG_03_Hybrid_Search_and_Reranking/#slide-02) and [why dense alone falls short](https://brendanjameslynskey.github.io/RAG_03_Hybrid_Search_and_Reranking/#slide-01).
+- The [RAG and retrieval](https://brendanjameslynskey.github.io/LLM_Hub_RAG_Retrieval/) hub.
+- The corpus and how it was chosen: [the data page](/data).
+
+</Callout>

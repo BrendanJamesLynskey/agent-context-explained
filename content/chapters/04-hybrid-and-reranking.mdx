@@ -1,0 +1,60 @@
+<HybridWidget>
+  <Eq
+    label="Reciprocal rank fusion: each retriever adds one over k plus the chunk's rank in its list; then a cross-encoder scores the question with each of the top n chunks and reorders them"
+    tex="\begin{gathered} \mathrm{RRF}(d) = \sum_{r \in \{\text{BM25},\,\text{dense}\}} \frac{1}{k + \htmlClass{hl-rank}{\mathrm{rank}_r(d)}} \qquad k = 60 \\ \text{top } n \text{ re-sorted by } \htmlClass{hl-ce}{s(q, d) = \mathrm{CrossEncoder}([q; d])} \end{gathered}"
+  />
+</HybridWidget>
+
+<Layer kind="concept">
+
+BM25 and dense retrieval fail on different questions: one misses paraphrases, the other misses rare exact words. **Hybrid retrieval** runs both and merges the lists. Their scores are not comparable (a BM25 score of 11 and a cosine of 0.6 mean nothing to each other), so the robust way to merge is by **rank**: reciprocal rank fusion ([Cormack, Clarke and Büttcher, SIGIR 2009](https://doi.org/10.1145/1571941.1572114)) gives each chunk $\sum_r 1/(k + \mathrm{rank}_r)$, with $k = 60$ from the paper. A chunk near the top of both lists beats one at the very top of only one. The animation adds one rank of both lists per step; when both lists hold the same chunk at a rank, its score doubles.
+
+Over all <V of="corpus.questions" fmt="int" /> questions (top 50 of each list fused), RRF ranks the answer's chunk first <V of="hybrid.evals.rrf.mean.recall@1" fmt="pct" /> of the time, against <V of="hybrid.evals.bm25.mean.recall@1" fmt="pct" /> for BM25 alone and <V of="hybrid.evals.dense.mean.recall@1" fmt="pct" /> for dense alone; its nDCG@10 is <V of="hybrid.evals.rrf.mean.ndcg@10" fmt="f3" />. The alternative, normalising each list's scores to $[0, 1]$ and taking $\alpha \cdot \text{dense} + (1 - \alpha) \cdot \text{BM25}$, does a little better here at $\alpha = 0.5$ (<V of="hybrid.evals.weighted.mean.recall@1" fmt="pct" />, nDCG@10 <V of="hybrid.evals.weighted.mean.ndcg@10" fmt="f3" />), but it has a weight to tune, and the right weight depends on the corpus.
+
+**Reranking** is the second stage. A **cross-encoder** reads the question and a chunk together, every word of one attending to every word of the other, and outputs one relevance score. It is far more accurate than comparing two separately computed vectors, and far too slow to run over a whole corpus, so it rereads only the top $n$ of the first stage. Here it is [ms-marco-MiniLM-L6-v2](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2), trained on the MS MARCO passage-ranking task; its scores were recorded once, offline, for each question's candidates (<V of="corpus.rerank_pairs" fmt="int" /> question–chunk pairs). Reranking RRF's top 20 puts the answer's chunk first <V of="hybrid.evals.rerank.mean.recall@1" fmt="pct" /> of the time (nDCG@10 <V of="hybrid.evals.rerank.mean.ndcg@10" fmt="f3" />). A reranker cannot find what the first stage missed; it can only reorder, which is why the first stage is tuned for recall at a generous depth and the second for precision at the top.
+
+</Layer>
+
+<Callout kind="illustrative">
+
+Every score is real: BM25 and cosines recomputed by the engine, cross-encoder scores recorded from the model (ONNX Runtime, CPU, revision `233902d`) and rounded to thousandths. Scoring every question against every chunk would have taken hours on the machine that built the data, so scores were recorded for a **candidate pool** per question: RRF's top 30 plus the BM25 and dense top 10s. Every rerank on this site stays inside that pool. Latency is not modelled here.
+
+</Callout>
+
+<Layer kind="maths">
+
+For a chunk at ranks $r_1$ and $r_2$ in the two lists, $\mathrm{RRF} = \frac{1}{k + r_1} + \frac{1}{k + r_2}$. With $k = 60$, first place in one list and absence from the other scores $1/61 \approx 0.0164$, while fifth place in both scores $2/65 \approx 0.0308$: agreement wins. A small $k$ makes the top ranks count for more (with $k = 10$, first place alone is $1/11$); a large $k$ flattens the curve. Only ranks enter, so no calibration between retrievers is needed.
+
+The weighted alternative min-max normalises each retriever's top 50, $\hat s = (s - s_{\min})/(s_{\max} - s_{\min})$, and gives the rest 0. It is sensitive to outliers: one very high BM25 score squashes every other BM25 score towards 0.
+
+For the metrics: with $R$ the chunks that hold the answer (one, except where chunks overlap), recall@$k = |R \cap \text{top}_k|/|R|$; MRR@10 is $1/\text{rank}$ of the first relevant chunk (0 below rank 10); nDCG@10 $= \sum_{i \le 10} \mathrm{rel}_i/\log_2(i + 1)$ divided by the same sum for the ideal ranking.
+
+</Layer>
+
+<Layer kind="code">
+
+Reciprocal rank fusion and the rerank, cut from the vendored engine (`retrieval.ts`):
+
+```ts
+export function rrf(rankings: number[][], n: number, k = RRF_K, depth = 50): number[] {
+  const s = new Array<number>(n).fill(0);
+  for (const r of rankings) {
+    for (let pos = 0; pos < Math.min(depth, r.length); pos++) s[r[pos]!] = s[r[pos]!]! + 1 / (k + pos + 1);
+  }
+  return s;
+}
+```
+
+```ts
+const sorted = [...top].sort((a, b) => ce.get(b)! - ce.get(a)! || pos.get(a)! - pos.get(b)!);
+return sorted.concat(order.slice(n));
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- RAG series: [hybrid fusion, RRF, normalisation and weighted sums](https://brendanjameslynskey.github.io/RAG_03_Hybrid_Search_and_Reranking/#slide-03), [cross-encoder rerankers](https://brendanjameslynskey.github.io/RAG_03_Hybrid_Search_and_Reranking/#slide-04) and [evaluation: recall@k, MRR, nDCG](https://brendanjameslynskey.github.io/RAG_03_Hybrid_Search_and_Reranking/#slide-08); [the RRF derivation](https://brendanjameslynskey.github.io/RAG_08_Two_Step_Retrieval_Architecture/#slide-06) and [the recall ceiling](https://brendanjameslynskey.github.io/RAG_08_Two_Step_Retrieval_Architecture/#slide-05); [cross-encoder architecture](https://brendanjameslynskey.github.io/RAG_09_Reranker_Mathematics/#slide-02) and [DCG, nDCG, MRR, MAP](https://brendanjameslynskey.github.io/RAG_09_Reranker_Mathematics/#slide-09).
+- Bajaj et al., [MS MARCO](https://arxiv.org/abs/1611.09268) (2016), the reranker's training data.
+
+</Callout>

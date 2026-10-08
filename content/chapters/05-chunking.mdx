@@ -1,0 +1,59 @@
+<ChunkWidget>
+  <Eq
+    label="A chunker fills each chunk up to S tokens; the semantic chunker also breaks between sentences i and i+1 when their similarity is at or below the article's p-th percentile"
+    tex="\begin{gathered} \sum_{\text{pieces} \in c} \text{tokens} \le \htmlClass{hl-size}{S} \\ \text{break}(i) \iff \htmlClass{hl-sim}{\cos(\mathbf{s}_i, \mathbf{s}_{i+1})} \le \htmlClass{hl-sim}{\theta_p}, \quad \theta_p = \text{the } p\text{-th percentile of the article's } \cos(\mathbf{s}_i, \mathbf{s}_{i+1}) \end{gathered}"
+  />
+</ChunkWidget>
+
+<Layer kind="concept">
+
+Before anything can be retrieved, documents are cut into **chunks**, and the chunk is the unit everything else sees: BM25 counts words per chunk, the embedder makes one vector per chunk, and the window receives whole chunks. Where the cuts fall decides whether the answer to a question sits in one chunk, two chunks, or a chunk so long that its vector is a blur. Three chunkers, all cutting only between the tokenizer's pieces so that sizes are exact Qwen2.5 token counts:
+
+- **Fixed**: fill each chunk to $S$ tokens and cut, wherever that falls, mid-sentence if need be. Optionally overlap neighbours by a few tokens so that a sentence cut at one boundary appears whole in the next chunk.
+- **Recursive** (the scheme of LangChain's `RecursiveCharacterTextSplitter`): split at paragraphs; split a paragraph that is too long at sentences, a sentence that is too long at fixed windows; then merge neighbouring pieces while they fit in $S$.
+- **Semantic**: embed every sentence, measure how similar each sentence is to the next (the line along the bottom of the animation), and break where the similarity drops to the article's lowest quarter, as well as wherever $S$ would be exceeded.
+
+The animation lays the three chunkers' chunks over one stretch of the complexity-theory article. A question asked about this stretch has the answer "set of triples"; fixed 256-token chunks cut it in two (the hatched mark), so no single chunk holds it and that question is lost whatever the retriever does.
+
+The table measures each chunking over all <V of="corpus.questions" fmt="int" /> questions. Fixed chunks lose answers at their boundaries: <V of="chunking.table.fixed-128.bm25.lost" fmt="int" /> at 128 tokens, <V of="chunking.table.fixed-256.bm25.lost" fmt="int" /> at 256, <V of="chunking.table.fixed-512.bm25.lost" fmt="int" /> at 512. Long chunks have a second problem: the embedder reads only 256 word pieces, and <V of="truncated.fixed-512" fmt="int" /> of the <V of="chunking.table.fixed-512.chunks" fmt="int" /> 512-token chunks are longer than that, so their vectors describe only their first half; dense recall@5 falls to <V of="chunking.table.fixed-512.dense.mean.recall@5" fmt="f3" />, while BM25, which reads every word, gets <V of="chunking.table.fixed-512.bm25.mean.recall@5" fmt="f3" />. The recursive chunker respects paragraphs, loses no answer, and gives the best dense recall@5 (<V of="chunking.table.recursive-256.dense.mean.recall@5" fmt="f3" />) with chunks of <V of="chunking.table.recursive-256.mean_tokens" fmt="num" /> tokens on average. The semantic chunker makes many small chunks (<V of="chunking.table.semantic-256.chunks" fmt="int" />, <V of="chunking.table.semantic-256.mean_tokens" fmt="num" /> tokens on average) and does no better than fixed 256-token chunks here (dense recall@5 <V of="chunking.table.semantic-256.dense.mean.recall@5" fmt="f3" /> against <V of="chunking.table.fixed-256.dense.mean.recall@5" fmt="f3" />): its breaks follow topic shifts, but small chunks give BM25 and the embedder less to go on, and it still cut <V of="chunking.table.semantic-256.bm25.lost" fmt="int" /> answer in two. Overlap (fixed 256 with 64 tokens shared) loses no answer, but some answers now sit in two chunks, which halves recall@1 for those questions by definition; its MRR, which only asks where the first relevant chunk is, is BM25's best of the fixed chunkings (<V of="chunking.table.fixed-256-o64.bm25.mean.mrr@10" fmt="f3" /> against <V of="chunking.table.fixed-256.bm25.mean.mrr@10" fmt="f3" />).
+
+</Layer>
+
+<Callout kind="illustrative">
+
+The boundaries are exact and reproducible: the Python reference and this page cut the same chunks, and each embedding file records a hash of the chunks it embedded. The sentence splitter is a simple rule (end punctuation, then a space and a capital letter, digit or quote), so it splits after abbreviations such as "U.S."; the semantic chunker's threshold (the 25th percentile) and the sizes are choices, not tuned values. The corpus is clean encyclopedic prose; documents with tables, code or layout reward structure-aware chunking far more.
+
+</Callout>
+
+<Layer kind="maths">
+
+Let a document be a sequence of pieces with token counts $t_j$. A fixed chunker with size $S$ and overlap $O$ emits chunks $[a, b)$ with $\sum_{a \le j < b} t_j \le S$ (a single piece larger than $S$ is a chunk of its own) and starts the next chunk at the smallest $a' > a$ with $\sum_{a' \le j < b} t_j \le O$.
+
+An answer of length $\ell$ placed uniformly at random is cut by a fixed chunk boundary with probability about $(\ell - 1)/\bar c$, for chunk length $\bar c$ in the same units: longer chunks cut fewer answers, overlap of at least $\ell$ cuts none. The semantic chunker's threshold is the nearest-rank percentile $\theta_p = s_{(\lfloor (n - 1) p / 100 \rfloor)}$ of the article's $n$ neighbouring-sentence similarities sorted ascending, computed from the int8 sentence vectors, so the breaks too are bit-identical in both languages.
+
+</Layer>
+
+<Layer kind="code">
+
+The fixed chunker's inner loop and the semantic chunker's threshold, cut from the vendored engine (`chunking.ts`):
+
+```ts
+while (b < n && (t + pieces[b]![2] <= size || b === a)) {
+  t += pieces[b]![2];
+  b += 1;
+}
+```
+
+```ts
+const thr = srt[Math.floor(((srt.length - 1) * pct) / 100)]!;
+return [thr, sims.map((s) => s <= thr)];
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- RAG series: [chunking philosophy](https://brendanjameslynskey.github.io/RAG_04_Chunking_and_Ingestion/#slide-01), [fixed, semantic, structural and contextual strategies](https://brendanjameslynskey.github.io/RAG_04_Chunking_and_Ingestion/#slide-02) and [recursive splitting and where it breaks](https://brendanjameslynskey.github.io/RAG_04_Chunking_and_Ingestion/#slide-03). The deck's 256–512-token sweet spot assumes an embedder that reads the whole chunk; this one stops at 256 word pieces.
+- [Agent Harnesses Explained](https://agent-harnesses-explained.vercel.app) for what happens to chunks once they are tool results in a real loop.
+
+</Callout>

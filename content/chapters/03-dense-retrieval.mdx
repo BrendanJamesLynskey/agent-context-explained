@@ -1,0 +1,60 @@
+<DenseWidget>
+  <Eq
+    label="Cosine similarity: the dot product of the two vectors divided by the product of their lengths; with int8 vectors every sum is an exact integer"
+    tex="\cos(\mathbf{q}, \mathbf{d}) = \frac{\htmlClass{hl-dot}{\mathbf{q} \cdot \mathbf{d}}}{\htmlClass{hl-norm}{\lVert \mathbf{q} \rVert\, \lVert \mathbf{d} \rVert}} = \frac{\htmlClass{hl-dot}{\sum_{i=1}^{384} q_i d_i}}{\htmlClass{hl-norm}{\sqrt{\sum_i q_i^2 \sum_i d_i^2}}}"
+  />
+</DenseWidget>
+
+<Layer kind="concept">
+
+A **dense retriever** turns text into a vector so that texts with similar meaning point in similar directions, then finds the chunks whose vectors are closest to the question's. The model here is [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2): a six-layer MiniLM transformer, fine-tuned by the Sentence-Transformers project on over a billion pairs of related sentences so that a pair's vectors end up close (its model card, accessed 2026-10-08). Its vector is the average of its last layer's token vectors, normalised to length one: 384 numbers. It reads at most 256 word pieces; anything longer is cut off, which matters for [chapter 5](/learn/05-chunking).
+
+The model ran **once, offline**, over every chunk and every question. The site ships the vectors, rounded to 8-bit integers, and the engine finds neighbours by cosine similarity in all 384 dimensions, here in your browser. The picture squeezes those dimensions onto the two directions in which the chunks vary most (principal component analysis, computed offline); those two directions hold only <V of="dense.pca.explained.0" fmt="pct" /> and <V of="dense.pca.explained.1" fmt="pct" /> of the variance, so the articles separate into rough clouds but a neighbour can look far away on the page while being close in 384 dimensions.
+
+On the <V of="corpus.questions" fmt="int" /> questions, int8 dense retrieval puts the answer's chunk first <V of="dense.evals.int8.mean.recall@1" fmt="pct" /> of the time and in the top five <V of="dense.evals.int8.mean.recall@5" fmt="pct" />: behind BM25 (<V of="hybrid.evals.bm25.mean.recall@1" fmt="pct" /> and <V of="hybrid.evals.bm25.mean.recall@5" fmt="pct" />) on this corpus, whose questions borrow the paragraph's words. Where dense retrieval earns its keep is a question phrased differently from the text, as the Moon-landing query of [chapter 2](/learn/02-lexical-retrieval) was; [chapter 4](/learn/04-hybrid-and-reranking) combines the two.
+
+**How small can the vectors be?** Switch the precision. The float32 vectors (1,536 bytes each) were measured once, offline: recall@5 <V of="dense.float32.recall@5" fmt="f3" />. Rounded to int8 (384 bytes): <V of="dense.evals.int8.mean.recall@5" fmt="f3" />, no measurable loss. To int4 (192 bytes, values −7 to 7): <V of="dense.evals.int4.mean.recall@5" fmt="f3" />. To one bit per dimension, the sign (48 bytes, compared by counting agreeing bits): <V of="dense.evals.binary.mean.recall@5" fmt="f3" />, and the answer's chunk is first only <V of="dense.evals.binary.mean.recall@1" fmt="pct" /> of the time. A 32-fold saving costs real recall at this size; production systems use binary vectors to shortlist and rescore the shortlist at higher precision.
+
+</Layer>
+
+<Callout kind="illustrative">
+
+The vectors are real model outputs (all-MiniLM-L6-v2, revision `1110a24`, ONNX Runtime on a CPU) and every neighbour and metric is recomputed from them. The 2-D picture is a projection for the eye only. The float32 numbers come from the offline run and are not reproducible on this page, which has only the int8 vectors; int4 and binary are derived from int8 here, not from float32. The int8 rounding scales each vector so its largest component is ±127.
+
+</Callout>
+
+<Layer kind="maths">
+
+With $\mathbf{q}, \mathbf{d} \in \mathbb{Z}^{384}$ (each component in $[-127, 127]$), $\mathbf{q}\cdot\mathbf{d}$, $\lVert\mathbf{q}\rVert^2$ and $\lVert\mathbf{d}\rVert^2$ are exact integers below $2^{23}$, and their product below $2^{53}$, so the cosine is one correctly rounded square root and one division: the Python reference and this page agree to the last bit.
+
+Scaling a vector does not change its cosine with anything, so each vector gets its own scale ($127/\max_i |x_i|$). Rounding adds an error of at most half a step per component; with 384 components the errors mostly cancel in the dot product, which is why int8 matches float32. The int4 vectors are $\operatorname{sign}(q)\,\lfloor (14|q| + 127)/254 \rfloor$, rounding $7|q|/127$ half up. The binary similarity $(d - 2h)/d$, with $h$ the Hamming distance, is the cosine of the two sign vectors; it throws away every magnitude.
+
+</Layer>
+
+<Layer kind="code">
+
+Cosine and the int4 re-quantisation, cut from the vendored engine (`vectors.ts`):
+
+```ts
+export function cosine(a: Vec, b: Vec): number {
+  const na = dot(a, a);
+  const nb = dot(b, b);
+  if (na === 0 || nb === 0) return 0;
+  return dot(a, b) / Math.sqrt(na * nb);
+}
+```
+
+```ts
+const m = Math.floor((Math.abs(q) * 14 + 127) / 254);
+out[i] = q < 0 ? -m : m;
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- RAG series: [why embeddings](https://brendanjameslynskey.github.io/RAG_01_Embedding_Models/#slide-01), [bi-encoder against cross-encoder](https://brendanjameslynskey.github.io/RAG_01_Embedding_Models/#slide-02), [Matryoshka embeddings](https://brendanjameslynskey.github.io/RAG_01_Embedding_Models/#slide-05) and [practical sizing](https://brendanjameslynskey.github.io/RAG_01_Embedding_Models/#slide-08); [ANN mathematics](https://brendanjameslynskey.github.io/RAG_08_Two_Step_Retrieval_Architecture/#slide-04) for what replaces the exhaustive search at scale.
+- [Numerics Explained](https://numerics-explained.vercel.app) for int8 and int4 quantisation in general.
+- Wang et al., [MiniLM](https://arxiv.org/abs/2002.10957) (2020); Reimers and Gurevych, [Sentence-BERT](https://arxiv.org/abs/1908.10084) (2019).
+
+</Callout>

@@ -1,0 +1,44 @@
+{
+  "window": {
+    "files": ["corpus.json"],
+    "task": 12,
+    "budgets": [1000, 1500, 2000, 3000],
+    "policies": ["unbounded", "truncate", "compact", "retrieve"]
+  },
+  "lexical": {
+    "files": ["corpus.json"],
+    "queries": [0, 17, 61, 140],
+    "free": ["when did the first crewed moon landing happen", "steam engine efficiency and condensers"],
+    "k1": [0.5, 1.2, 2.0],
+    "b": [0, 0.75, 1],
+    "evals": [[1.2, 0.75], [0.5, 0.75], [2.0, 0.75], [1.2, 0], [1.2, 1]]
+  },
+  "dense": {
+    "files": ["corpus.json", "emb-questions.json", "emb-recursive-256.json", "pca.json", "manifest.json"],
+    "path": [0, 17, 61, 92, 140, 175, 38, 120],
+    "k": 5,
+    "precisions": ["int8", "int4", "binary"]
+  },
+  "hybrid": {
+    "files": ["corpus.json", "emb-questions.json", "emb-recursive-256.json", "rerank.json"],
+    "questions": [0, 17, 61, 92, 140, 175],
+    "n": 20
+  },
+  "chunking": {
+    "files": [
+      "corpus.json",
+      "emb-questions.json",
+      "emb-sentences.json",
+      "emb-fixed-128.json",
+      "emb-fixed-256.json",
+      "emb-fixed-512.json",
+      "emb-fixed-256-o64.json",
+      "emb-recursive-256.json",
+      "emb-semantic-256.json"
+    ],
+    "configs": ["fixed-256", "recursive-256", "semantic-256"],
+    "all": ["fixed-128", "fixed-256", "fixed-512", "fixed-256-o64", "recursive-256", "semantic-256"],
+    "article": 0,
+    "excerpt": [4000, 7000]
+  }
+}

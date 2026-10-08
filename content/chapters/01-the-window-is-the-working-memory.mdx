@@ -1,0 +1,57 @@
+<WindowWidget>
+  <Eq
+    label="The input tokens a task costs are the window's size summed over every model call; the window must stay within the budget B; compaction replaces old reads with a summary"
+    tex="\begin{gathered} C_{\text{in}} = \htmlClass{hl-spent}{\sum_{t=1}^{T}} \htmlClass{hl-window}{|W_t|} \qquad \htmlClass{hl-window}{|W_t|} \le \htmlClass{hl-budget}{B} \\ W \;\to\; \text{system} + \text{task} + \htmlClass{hl-summary}{S(\text{old reads})} + \text{latest read} \end{gathered}"
+  />
+</WindowWidget>
+
+<Layer kind="concept">
+
+A model has no memory between calls. Everything it can use to choose its next step is in the prompt: the system prompt, the task, and whatever the agent has put there since, its tool results above all. That prompt is the **context window**, and for an agent it plays the part of working memory. It is also the bill: every model call is charged for the whole window again, so a task's input cost is the window's size summed over its calls, $C_{\text{in}} = \sum_t |W_t|$.
+
+The animation runs a research task of twelve questions, two from each of the six articles in the corpus. For each question the agent searches (BM25, [chapter 2](/learn/02-lexical-retrieval)) and reads the best chunk, then the next, until it has read the chunk that holds the answer. Each read is one model call. With no limit the window grows to <V of="window.runs.unbounded-1500.peak" fmt="int" /> tokens and the task costs <V of="window.runs.unbounded-1500.spent" fmt="int" /> input tokens; every fact stays in view, so all <V of="window.runs.unbounded-1500.recalled" fmt="int" /> questions are answered.
+
+Give the window a budget of 1,500 tokens and something has to go. Three policies:
+
+- **Truncate**: drop the oldest read. Cheap, <V of="window.runs.truncate-1500.spent" fmt="int" /> tokens, but the facts in the dropped reads go with them: at the end the agent can answer only <V of="window.runs.truncate-1500.recalled" fmt="int" /> of the 12 questions. What it "knows" (the dots) grows with each read and shrinks with each drop.
+- **Compact**: when the window overflows, one extra model call summarises every read but the latest into a line per fact, and the summary replaces them. The agent keeps all <V of="window.runs.compact-1500.recalled" fmt="int" /> facts for <V of="window.runs.compact-1500.spent" fmt="int" /> tokens, <V of="derived.compact-1500.spent_vs_unbounded" fmt="pct" /> of the unbounded cost, in <V of="window.runs.compact-1500.compactions" fmt="int" /> compactions.
+- **Retrieve**: truncate, and when a question's fact has gone, search for it again before answering. Every question is answered (<V of="window.runs.retrieve-1500.recalled" fmt="int" />), but the agent reads <V of="window.runs.retrieve-1500.reads" fmt="int" /> chunks instead of <V of="window.runs.truncate-1500.reads" fmt="int" /> and spends <V of="window.runs.retrieve-1500.spent" fmt="int" /> tokens, more than with no limit at all, because each extra read pays for a full window.
+
+Smaller budgets make the trade sharper: at 1,000 tokens truncation keeps <V of="window.runs.truncate-1000.recalled" fmt="int" /> facts; at 3,000 the whole task almost fits and the policies barely differ. The rest of the site takes these pieces apart: how retrieval finds the right chunk ([chapters 2 to 4](/learn/02-lexical-retrieval)), and how the text is cut into chunks in the first place ([chapter 5](/learn/05-chunking)).
+
+</Layer>
+
+<Callout kind="illustrative">
+
+The budgets (1,000 to 3,000 tokens) are **scaled down** so that a twelve-question task overflows them; real windows hold 100,000 tokens or more, and real tasks fill them with longer tool results. The agent is **scripted**: it searches with BM25 and reads at most three chunks a question. Its summariser is **perfect by construction**: it keeps one line per fact, so compaction loses nothing here; how much a real summary keeps is a measurement for a later chapter. Token counts are real (Qwen2.5's tokenizer) and the chunks are real text from the corpus.
+
+</Callout>
+
+<Layer kind="maths">
+
+Let $W_t$ be the window at call $t$ and $T$ the number of calls. The input cost is $C_{\text{in}} = \sum_{t=1}^{T} |W_t|$. With no budget, $|W_t|$ grows by each read's length $\ell_t$, so the cost grows with the square of the number of reads: $C_{\text{in}} \approx \sum_t (|W_0| + \sum_{s<t} \ell_s)$.
+
+Truncation caps $|W_t| \le B$ and so caps the cost at $T B$, but a fact survives only while its read is among the most recent $\approx (B - |W_0|)/\bar\ell$ reads. Compaction replaces $k$ reads of total length $\sum \ell$ by a summary of length $|S| \ll \sum \ell$, at the price of one more call (here <V of="window.runs.compact-1500.calls" fmt="int" /> calls against <V of="window.runs.truncate-1500.calls" fmt="int" />). Re-retrieval keeps $|W_t| \le B$ but adds calls, each of cost up to $B$: it buys recall with $T$.
+
+</Layer>
+
+<Layer kind="code">
+
+The truncation policy, cut from the vendored engine (`windowRun`): drop the oldest read (or the oldest summary line) until the window fits, never the read just added.
+
+```ts
+const truncate = (qi: number | null) => {
+  while (used(items) > budget) {
+    const k = items.findIndex((it) => it.kind === "read" || it.kind === "summary");
+    if (k < 0 || k === items.length - 1) break;
+```
+
+</Layer>
+
+<Callout kind="deeper">
+
+- [Agent Harnesses Explained, chapter 3: the context budget](https://agent-harnesses-explained.vercel.app/learn/03-the-context-budget) (truncation, clipping and summarising compaction inside a real harness loop).
+- [LLM Inference Explained](https://llm-inference-explained.vercel.app) for why a long prompt costs time as well as money, and [Inference Trade-offs Explained](https://inference-tradeoffs-explained.vercel.app) for the hardware side.
+- The [agents](https://brendanjameslynskey.github.io/LLM_Hub_Agents/) and [RAG and retrieval](https://brendanjameslynskey.github.io/LLM_Hub_RAG_Retrieval/) slide series.
+
+</Callout>
