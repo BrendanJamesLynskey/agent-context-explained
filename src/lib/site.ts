@@ -17,6 +17,8 @@ export const SILICON_URL = "https://systolic-arrays-explained.vercel.app";
 export const TRADEOFFS_URL = "https://inference-tradeoffs-explained.vercel.app";
 export const HARNESSES_URL = "https://agent-harnesses-explained.vercel.app";
 export const PROTOCOLS_URL = "https://agent-protocols-explained.vercel.app";
+export const ORCHESTRATION_URL =
+  "https://agent-orchestration-explained.vercel.app";
 
 export const GITHUB_URL =
   "https://github.com/BrendanJamesLynskey/agent-context-explained";

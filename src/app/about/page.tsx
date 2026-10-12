@@ -13,6 +13,7 @@ import {
   GITHUB_URL,
   HARNESSES_URL,
   INFERENCE_URL,
+  ORCHESTRATION_URL,
   PROTOCOLS_URL,
   RAG_HUB,
   TRADEOFFS_URL,
@@ -54,6 +55,10 @@ export default function AboutPage(): JSX.Element {
           and{" "}
           <a href={PROTOCOLS_URL} className={A}>
             Agent Protocols Explained
+          </a>{" "}
+          and followed by{" "}
+          <a href={ORCHESTRATION_URL} className={A}>
+            Agent Orchestration Explained
           </a>
           , next to the LLM-systems sites (the{" "}
           <a href={DECODER_URL} className={A}>
