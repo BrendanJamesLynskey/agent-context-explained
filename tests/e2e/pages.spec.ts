@@ -87,6 +87,7 @@ test("the two-group site switch: a toggle and a row on desktop, a dropdown on ph
     ["Numerics", "https://numerics-explained.vercel.app"],
     ["Silicon", "https://systolic-arrays-explained.vercel.app"],
     ["Trade-offs", "https://inference-tradeoffs-explained.vercel.app"],
+    ["Compute in transit", "https://compute-in-transit-results.vercel.app"],
   ] as const)
     await expect(llm.getByRole("link", { name })).toHaveAttribute("href", href);
   // keyboard: the toggle is a pair of radio buttons
@@ -115,6 +116,9 @@ test("the two-group site switch: a toggle and a row on desktop, a dropdown on ph
     "aria-current",
     "true",
   );
+  await expect(
+    compact.getByRole("link", { name: "Compute in transit" }),
+  ).toHaveAttribute("href", "https://compute-in-transit-results.vercel.app");
   const box = await compact
     .getByRole("link", { name: "Decoder" })
     .boundingBox();
