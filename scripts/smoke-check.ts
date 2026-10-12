@@ -14,7 +14,7 @@
  * proves it rendered from the engine: the landing page must print the engine's own numbers
  * (computed here with the same code), the data page every shipped file's checksum, every
  * chapter its MDX (a layer, server-rendered KaTeX, the animation's placeholder), and the header
- * the two-group site switch. The tokenizer and every data file must be the vendored ones.
+ * the three-group site switch. The tokenizer and every data file must be the vendored ones.
  */
 import { createHash } from "node:crypto";
 
@@ -35,6 +35,8 @@ const SWITCH = [
   'href="https://agent-protocols-explained.vercel.app"',
   'href="https://agent-context-explained.vercel.app"',
   'href="https://compute-in-transit-results.vercel.app"',
+  'href="https://agent-orchestration-explained.vercel.app"',
+  'data-site-group="training"',
   "Context",
   'href="https://gpu-kernels-explained.vercel.app"',
 ];

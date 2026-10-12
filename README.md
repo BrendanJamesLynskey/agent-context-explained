@@ -19,15 +19,17 @@ embedding model runs on the site or in CI.
 ![Chapter 4: BM25 and dense lists merging rank by rank under reciprocal rank fusion, then a cross-encoder rerank](docs/screenshots/05-hybrid.png)
 
 Part of a family of companion sites. Agents: [Agent Harnesses Explained](https://agent-harnesses-explained.vercel.app),
-[Agent Protocols Explained](https://agent-protocols-explained.vercel.app) and this one. LLM systems: the
+[Agent Protocols Explained](https://agent-protocols-explained.vercel.app), this one, then
+[Agent Orchestration Explained](https://agent-orchestration-explained.vercel.app). Inference: the
 [Transformer Decoder Explainer](https://transformer-decoder-explained.vercel.app),
 [LLM Inference Explained](https://llm-inference-explained.vercel.app),
 [LLM Architectures Explained](https://llm-architectures-explained.vercel.app),
 [GPU Kernels Explained](https://gpu-kernels-explained.vercel.app),
 [Numerics Explained](https://numerics-explained.vercel.app),
 [Systolic Arrays Explained](https://systolic-arrays-explained.vercel.app),
-[Inference Trade-offs Explained](https://inference-tradeoffs-explained.vercel.app) and the
-[Compute in Transit results](https://compute-in-transit-results.vercel.app).
+[Inference Trade-offs Explained](https://inference-tradeoffs-explained.vercel.app). Training: the
+[Compute in Transit results](https://compute-in-transit-results.vercel.app), with Training (the second part of the
+decoder site) to come.
 
 ## Chapters
 
@@ -130,7 +132,7 @@ Deploying, smoke checks and updating the engine: [RUNBOOK.md](RUNBOOK.md).
 ## Origin
 
 The structure, animation infrastructure (`useStepper`, `AnimationPanel`, the clock), MDX pipeline, CI,
-checks and the two-group site switch are copied from
+checks and the three-group site switch are copied from
 [agent-protocols-explained](https://github.com/BrendanJamesLynskey/agent-protocols-explained) (itself from
 agent-harnesses-explained and gpu-kernels-explained); the engine vendoring follows llm-inference-explained.
 
