@@ -75,7 +75,7 @@ describe("vendored engine", () => {
       }[];
       chunks: Record<string, number[][]>;
     };
-    expect(fx.engine).toBe("1.5.0");
+    expect(fx.engine).toBe("1.11.1");
     const c = nodeCorpus();
     for (const [name, want] of Object.entries(fx.chunks))
       expect(
@@ -95,7 +95,7 @@ describe("vendored engine", () => {
     const fx = JSON.parse(
       readFileSync(join(ROOT, "tests/fixtures/context2_fixtures.json"), "utf8"),
     ) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-    expect(fx.engine).toBe("1.5.0");
+    expect(fx.engine).toBe("1.11.1");
     const r = new ctx.Retriever(nodeCorpus(), ctx.DEFAULT);
     for (const w of fx.lossy)
       expect(ctx.windowRun(r, fx.task, w.budget, w.policy, "lossy")).toEqual(w);

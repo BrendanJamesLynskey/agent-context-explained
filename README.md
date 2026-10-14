@@ -90,7 +90,7 @@ From part 2 of the recorded run ([`context2_results.md`](src/data/context2_resul
 The site vendors Agent_Loop_Sim's TypeScript port and its context data at a pinned commit
 (`pnpm vendor:engine <sha>`; `src/lib/engine/vendor/VENDORED.json` records the commit and each file's SHA-256)
 and runs it in a Web Worker, which fetches the tokenizer and only the data files a chapter needs
-(`public/context/`, 1.7 MB in all). Its `context` module (engine 1.5.0) has the corpus and questions, three
+(`public/context/`, 1.7 MB in all). Its `context` module (engine 1.5.0; vendored at 1.11.1) has the corpus and questions, three
 chunkers (fixed with optional overlap, recursive, semantic) cutting between Qwen2.5 pre-tokenizer pieces,
 BM25, dense retrieval at int8, int4 and binary precision, RRF and weighted fusion, a reranker stage over the
 recorded cross-encoder scores, recall@k, MRR@10 and nDCG@10, the window task of chapter 1 (with a perfect or a lossy summariser) and, since 1.5,
