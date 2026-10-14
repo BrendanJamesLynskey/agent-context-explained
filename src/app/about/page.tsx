@@ -8,6 +8,7 @@ import VENDORED from "@/lib/engine/vendor/VENDORED.json";
 import ENGINE_DATA from "@/lib/engine/vendor/engine_data.json";
 import { formatValue, lookup } from "@/lib/ctx/values";
 import {
+  AUTHOR,
   DECODER_URL,
   ENGINE_URL,
   GITHUB_URL,
@@ -209,6 +210,15 @@ export default function AboutPage(): JSX.Element {
           series.
         </p>
       </div>
+      <p
+        className="mt-12 text-sm text-neutral-600 dark:text-neutral-400"
+        data-author-credit
+      >
+        Written and built by{" "}
+        <a className={A} href={AUTHOR.url}>
+          {AUTHOR.name}
+        </a>
+      </p>
     </main>
   );
 }
