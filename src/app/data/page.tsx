@@ -13,12 +13,13 @@ import {
   SQUAD_PAPER,
   SQUAD_URL,
 } from "@/lib/site";
+import { withShare } from "@/lib/share";
 
-export const metadata = {
+export const metadata = withShare("/data", {
   title: "Data",
   description:
     "The corpus (a SQuAD v1.1 subset, CC BY-SA 4.0), the embedding model and the reranker that ran offline, every shipped file's checksum, and every retrieval result on the 200 labelled questions, packing and memory results, and the dated prices behind the long-context chapter.",
-};
+});
 
 const A =
   "focus-ring rounded text-accent underline underline-offset-2 dark:text-indigo-300";

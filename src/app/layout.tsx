@@ -10,10 +10,11 @@ import type { ReactNode } from "react";
 
 import { SiteHeader } from "@/components/ui/SiteHeader";
 import { SITE_URL } from "@/lib/site";
+import { withShare } from "@/lib/share";
 
 import "./globals.css";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = withShare("/", {
   metadataBase: new URL(SITE_URL),
   title: {
     default: "Agent Context Explained",
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
   },
   description:
     "What goes into an agent's context window and how it remembers beyond it: BM25, dense retrieval, hybrid fusion, reranking and chunking measured on a labelled corpus, packing, compaction, memory across sessions, and long context against retrieval, each animated by a tested engine.",
-};
+});
 
 export default function RootLayout({
   children,

@@ -9,12 +9,13 @@ import Link from "next/link";
 
 import { SECTIONS } from "@/lib/mdx/sections";
 import { RAG_HUB } from "@/lib/site";
+import { withShare } from "@/lib/share";
 
-export const metadata = {
+export const metadata = withShare("/learn", {
   title: "Learn",
   description:
     "Nine chapters on context engineering: the window as working memory, BM25, dense retrieval, hybrid fusion and reranking, chunking, packing the window, compaction, agent memory, and long context against retrieval, each built around an animation driven by a tested engine and measured on a labelled corpus.",
-};
+});
 
 export default function LearnIndex(): JSX.Element {
   return (
