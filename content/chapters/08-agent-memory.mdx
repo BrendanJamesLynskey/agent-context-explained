@@ -52,5 +52,6 @@ sc = store.map((_, i) => rec[i]! + imp[i]! + rn[i]!);
 - The [agents](https://brendanjameslynskey.github.io/LLM_Hub_Agents/) slide series, and [Introduction to LangGraph](https://brendanjameslynskey.github.io/Introduction_to_LangGraph/) for state, persistence and checkpointing in a real framework.
 - _MemGPT_ ([Packer et al., arXiv:2310.08560](https://arxiv.org/abs/2310.08560)) treats the window as main memory and pages facts in and out of external storage, an operating-system view of the same trade-off.
 - [Agent Harnesses Explained, the context budget](https://agent-harnesses-explained.vercel.app/learn/03-the-context-budget), and the [RAG and retrieval](https://brendanjameslynskey.github.io/LLM_Hub_RAG_Retrieval/) series for the retrieval underneath episodic and semantic memory.
+- A stored memory is input the agent will read later, so where it came from matters: [Agent Security Explained, untrusted input](https://agent-security-explained.vercel.app/learn/02-untrusted-input) labels every value with its source, and [trust boundaries](https://agent-security-explained.vercel.app/learn/01-trust-boundaries) shows why a memory written from untrusted text stays untrusted when it is read back.
 
 </Callout>
