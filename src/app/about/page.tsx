@@ -20,12 +20,13 @@ import {
   TRADEOFFS_URL,
   repoFile,
 } from "@/lib/site";
+import { withShare } from "@/lib/share";
 
-export const metadata = {
+export const metadata = withShare("/about", {
   title: "About",
   description:
     "What Agent Context Explained's engine computes, what is illustrative, where the corpus and the models' outputs come from, and how Python and the browser are checked to agree exactly.",
-};
+});
 
 const A =
   "focus-ring rounded text-accent underline underline-offset-2 dark:text-indigo-300";
@@ -76,7 +77,7 @@ export default function AboutPage(): JSX.Element {
           and others, all in the header&apos;s switch).
         </p>
 
-        <h2>Measured, not asserted</h2>
+        <h2 id="measured">Measured, not asserted</h2>
         <p>
           Every retrieval number is measured on a fixed, openly licensed corpus:{" "}
           {v("corpus.articles", "int")} articles of the SQuAD v1.1 development

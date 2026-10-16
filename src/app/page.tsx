@@ -1,5 +1,7 @@
+import type { Route } from "next";
 import Link from "next/link";
 
+import { CheckedStrip, StartButton } from "@/components/ui/Landing";
 import { StageBars } from "@/components/viz/StageBars";
 import { formatValue, lookup } from "@/lib/ctx/values";
 import { SECTIONS } from "@/lib/mdx/sections";
@@ -24,40 +26,21 @@ export default function HomePage(): JSX.Element {
       <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
         What goes into the window, and how an agent remembers beyond it.
       </h1>
-      <div className="mt-8 grid items-center gap-8 md:grid-cols-[1fr_minmax(0,24rem)]">
+      <div className="mt-6 grid items-start gap-8 md:grid-cols-[1fr_minmax(0,24rem)]">
         <div>
           <p className="max-w-2xl text-lg text-neutral-600 dark:text-neutral-300">
-            A model knows only what is in its context window.{" "}
-            <strong>Context engineering</strong> decides what goes in: which
-            chunks of which documents, found how, cut where, packed in what
-            order, what to drop or summarise when the window fills, and what to
-            remember between sessions. Every claim here is measured, not
-            asserted: on {v("corpus.articles", "int")} articles of{" "}
-            <a href={SQUAD_URL} className={LINK}>
-              SQuAD
-            </a>{" "}
-            and {v("corpus.questions", "int")} of their questions, each with its
-            answer&apos;s exact place in the text, so a retriever either finds
-            the chunk that holds the answer or does not.
+            An interactive guide to what goes into an agent&apos;s context
+            window, retrieval and memory, with every number measured on a real
+            corpus.
           </p>
-          <p className="mt-4 max-w-2xl text-neutral-600 dark:text-neutral-300">
-            The animations are driven by{" "}
-            <a href={ENGINE_URL} className={LINK}>
-              Agent_Loop_Sim
-            </a>
-            &apos;s context module. A small embedding model and a cross-encoder
-            ran once, offline; their outputs ship with the site (int8 vectors
-            and recorded scores), and the engine recomputes every chunk
-            boundary, score, ranking and metric from them, identically in Python
-            and in your browser. On this corpus BM25 finds the answer&apos;s
-            chunk first {v("hybrid.evals.bm25.mean.recall@1", "pct")} of the
-            time, dense retrieval {v("hybrid.evals.dense.mean.recall@1", "pct")}
-            , the two fused {v("hybrid.evals.rrf.mean.recall@1", "pct")}, and
-            fused then reranked {v("hybrid.evals.rerank.mean.recall@1", "pct")}.
-            No language model runs anywhere.
-          </p>
+          <div className="mt-6">
+            <StartButton href={`/learn/${SECTIONS[0]!.slug}` as Route} />
+          </div>
         </div>
-        <figure className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+        <figure
+          data-hero-figure
+          className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800"
+        >
           <StageBars />
           <figcaption className="mt-2 text-xs text-neutral-600 dark:text-neutral-400">
             Recall at 1 and at 5 for each stage, over all{" "}
@@ -66,6 +49,47 @@ export default function HomePage(): JSX.Element {
           </figcaption>
         </figure>
       </div>
+      <CheckedStrip href="/about#measured">
+        Every retrieval number is measured on {v("corpus.questions", "int")}{" "}
+        SQuAD questions with real MiniLM embeddings and recorded reranker
+        scores, and the TypeScript engine in your browser reproduces the Python
+        reference exactly, with no tolerance.
+      </CheckedStrip>
+      <section aria-labelledby="learn-heading" className="mt-12">
+        <h2 id="learn-heading" className="text-xl font-semibold tracking-tight">
+          What you&apos;ll learn
+        </h2>
+        <p className="mt-4 max-w-2xl text-neutral-600 dark:text-neutral-300">
+          A model knows only what is in its context window.{" "}
+          <strong>Context engineering</strong> decides what goes in: which
+          chunks of which documents, found how, cut where, packed in what order,
+          what to drop or summarise when the window fills, and what to remember
+          between sessions. Every claim here is measured, not asserted: on{" "}
+          {v("corpus.articles", "int")} articles of{" "}
+          <a href={SQUAD_URL} className={LINK}>
+            SQuAD
+          </a>{" "}
+          and {v("corpus.questions", "int")} of their questions, each with its
+          answer&apos;s exact place in the text, so a retriever either finds the
+          chunk that holds the answer or does not.
+        </p>
+        <p className="mt-4 max-w-2xl text-neutral-600 dark:text-neutral-300">
+          The animations are driven by{" "}
+          <a href={ENGINE_URL} className={LINK}>
+            Agent_Loop_Sim
+          </a>
+          &apos;s context module. A small embedding model and a cross-encoder
+          ran once, offline; their outputs ship with the site (int8 vectors and
+          recorded scores), and the engine recomputes every chunk boundary,
+          score, ranking and metric from them, identically in Python and in your
+          browser. On this corpus BM25 finds the answer&apos;s chunk first{" "}
+          {v("hybrid.evals.bm25.mean.recall@1", "pct")} of the time, dense
+          retrieval {v("hybrid.evals.dense.mean.recall@1", "pct")}, the two
+          fused {v("hybrid.evals.rrf.mean.recall@1", "pct")}, and fused then
+          reranked {v("hybrid.evals.rerank.mean.recall@1", "pct")}. No language
+          model runs anywhere.
+        </p>
+      </section>
       <nav
         aria-label="Chapters"
         className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
