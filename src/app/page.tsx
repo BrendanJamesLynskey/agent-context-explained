@@ -6,6 +6,7 @@ import { StageBars } from "@/components/viz/StageBars";
 import { formatValue, lookup } from "@/lib/ctx/values";
 import { SECTIONS } from "@/lib/mdx/sections";
 import { ENGINE_URL, SQUAD_URL } from "@/lib/site";
+import { ReadingOrder } from "@/components/ui/ReadingOrder";
 
 const LINK =
   "focus-ring rounded underline decoration-accent/40 underline-offset-4 hover:decoration-accent";
@@ -90,6 +91,7 @@ export default function HomePage(): JSX.Element {
           model runs anywhere.
         </p>
       </section>
+      <ReadingOrder current="context" />
       <nav
         aria-label="Chapters"
         className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
