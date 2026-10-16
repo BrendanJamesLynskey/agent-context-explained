@@ -21,7 +21,7 @@ Measured over all 200 questions at $B = 512$ tokens, the answer is in the window
 
 <Callout kind="illustrative">
 
-The **position curve's parameters are illustrative**: shaped like the U that Liu et al. report, with numbers chosen for the picture; theirs depend on the model, the task and the number of documents. A chunk's value is a **rank gain**, not a probability of holding the answer. The budgets (256 to 2,048 tokens) are small so that packing bites; the candidates, their token counts and the reranker's order are real (Qwen2.5 tokens, the recorded cross-encoder).
+The **position curve's parameters are illustrative**: shaped like the U that Liu et al. report, with numbers chosen for the picture; theirs depend on the model, the task and the number of documents. Other chapters in the track use different stand-ins: [Orchestration, chapter 5](https://agent-orchestration-explained.vercel.app/learn/05-multi-agent-patterns) takes accuracy as flat up to 4,000 prompt tokens and falling linearly after, and most chapters assume a model reads its whole context perfectly. None of them is a measurement; the shape for your model and task is something to measure. A chunk's value is a **rank gain**, not a probability of holding the answer. The budgets (256 to 2,048 tokens) are small so that packing bites; the candidates, their token counts and the reranker's order are real (Qwen2.5 tokens, the recorded cross-encoder).
 
 </Callout>
 
