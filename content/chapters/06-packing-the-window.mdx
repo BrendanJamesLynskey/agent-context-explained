@@ -13,7 +13,11 @@ Retrieval hands the agent a ranked list; the window takes only so many tokens. *
 - **Density**: the same, but in order of value per token, the textbook greedy approximation to the knapsack. Short, middling chunks jump the queue.
 - **Optimal**: dynamic programming over integer budgets finds the set with the most total value. The animation shows it row by row: the best value reachable within $B$ using the first $i$ candidates.
 
+<span id="cx-packers" />
+
 Measured over all 200 questions at $B = 512$ tokens, the answer is in the window for <V of="packing.eval.results.512.top.answered" fmt="pct1" /> of questions with **top**, <V of="packing.eval.results.512.density.answered" fmt="pct1" /> with density and <V of="packing.eval.results.512.optimal.answered" fmt="pct1" /> with the optimal packing, even though the optimal set carries the most value (<V of="packing.eval.results.512.optimal.value" fmt="f3" /> against <V of="packing.eval.results.512.top.value" fmt="f3" />). The knapsack is optimal for the objective it is given, and "sum of rank gains" rewards two mediocre chunks over one excellent one. The value has to be right before the solver matters. At <V of="packing.eval.budgets.0" fmt="int" /> tokens, roughly one chunk, the gap is widest: <V of="packing.eval.results.256.top.answered" fmt="pct1" /> against <V of="packing.eval.results.256.density.answered" fmt="pct1" /> for density. At 1,024 tokens all three find the answer for at least <V of="packing.eval.results.1024.optimal.answered" fmt="pct1" /> of questions.
+
+<span id="cx-position" />
 
 **Where to put it.** Liu et al. measured that models use information at the start or the end of a long input better than in the middle ([_Lost in the Middle_, arXiv:2307.03172](https://arxiv.org/abs/2307.03172)): accuracy against position is U-shaped. The engine models that as two parabolas, $p = $ <V of="packing.position.start" fmt="num" /> at the start, <V of="packing.position.middle" fmt="num" /> at the trough, <V of="packing.position.end" fmt="num" /> at the end (illustrative numbers, not the paper's), and lays the packed set out four ways. At 1,024 tokens with the top packer, the mean $p$ at the answer is <V of="packing.eval.results.1024.top.ends" fmt="f3" /> with **ends** (best chunk first, second best last, weakest in the middle), <V of="packing.eval.results.1024.top.best-first" fmt="f3" /> best-first, <V of="packing.eval.results.1024.top.best-last" fmt="f3" /> best-last and <V of="packing.eval.results.1024.top.middle" fmt="f3" /> with the best chunk buried in the middle. With one chunk there is no "where": at 256 tokens every placement is the same.
 
@@ -57,3 +61,72 @@ for (let c = w; c <= budget; c++) {
 - Next: what to do when the window fills up anyway, [compaction](/learn/07-compaction-and-summarisation).
 
 </Callout>
+
+<CheckYourself>
+
+<Check
+  id="cx06-q1"
+  n={1}
+  choices={["Top (reranked order)", "Density (value per token)", "Optimal (the knapsack)"]}
+  answer={0}
+  q="At a 512-token budget, which packer most often puts the answer in the window?"
+  href="#cx-packers"
+  more="Three packers"
+>
+  Top: <V of="packing.eval.results.512.top.answered" fmt="pct1" /> against
+  <V of="packing.eval.results.512.optimal.answered" fmt="pct1" /> for the
+  optimal packing, which carries more value. The knapsack optimises the value
+  it is given, and a sum of rank gains rewards two mediocre chunks over one
+  excellent one.
+</Check>
+
+<Check
+  id="cx06-q2"
+  n={2}
+  input="slider"
+  min={50}
+  max={100}
+  step={0.5}
+  of="packing.eval.results.256.density.answered"
+  fmt="pct1"
+  abs={2}
+  q="At 256 tokens, roughly one chunk, how often does the density packer get the answer in?"
+  href="#cx-packers"
+  more="Three packers"
+>
+  The gap is widest here: top manages
+  <V of="packing.eval.results.256.top.answered" fmt="pct1" />. Short, middling
+  chunks jump the density queue and crowd out the best one.
+</Check>
+
+<Check
+  id="cx06-q3"
+  n={3}
+  choices={["Best first", "Best last", "Ends (best first, second best last)", "Best in the middle"]}
+  answer={2}
+  q="With the U-shaped position curve, which layout gives the answer the best chance of being used at 1,024 tokens?"
+  href="#cx-position"
+  more="Where to put it"
+>
+  Ends, <V of="packing.eval.results.1024.top.ends" fmt="f3" />, just ahead of
+  best first; burying the best chunk in the middle is worst
+  (<V of="packing.eval.results.1024.top.middle" fmt="f3" />). The curve's
+  numbers are illustrative; measure the shape for your model.
+</Check>
+
+</CheckYourself>
+
+<Remember>
+
+- Packing chooses which chunks go in and in what order: a 0/1 knapsack on tokens.
+- An optimal solver is only as good as its value: get the value right before the solver matters.
+- Taking chunks in reranked order is simple and, here, the best at putting the answer in.
+- Models use the start and end of a long input better than the middle: put the best chunks at the ends.
+
+<Keep>
+  At 512 tokens, reranked order puts the answer in
+  <V of="packing.eval.results.512.top.answered" fmt="pct1" /> of windows; the
+  knapsack, <V of="packing.eval.results.512.optimal.answered" fmt="pct1" />.
+</Keep>
+
+</Remember>

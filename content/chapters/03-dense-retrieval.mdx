@@ -11,7 +11,11 @@ A **dense retriever** turns text into a vector so that texts with similar meanin
 
 The model ran **once, offline**, over every chunk and every question. The site ships the vectors, rounded to 8-bit integers, and the engine finds neighbours by cosine similarity in all 384 dimensions, here in your browser. The picture squeezes those dimensions onto the two directions in which the chunks vary most (principal component analysis, computed offline); those two directions hold only <V of="dense.pca.explained.0" fmt="pct" /> and <V of="dense.pca.explained.1" fmt="pct" /> of the variance, so the articles separate into rough clouds but a neighbour can look far away on the page while being close in 384 dimensions.
 
+<span id="cx-dense-recall" />
+
 On the <V of="corpus.questions" fmt="int" /> questions, int8 dense retrieval puts the answer's chunk first <V of="dense.evals.int8.mean.recall@1" fmt="pct" /> of the time and in the top five <V of="dense.evals.int8.mean.recall@5" fmt="pct" />: behind BM25 (<V of="hybrid.evals.bm25.mean.recall@1" fmt="pct" /> and <V of="hybrid.evals.bm25.mean.recall@5" fmt="pct" />) on this corpus, whose questions borrow the paragraph's words. Where dense retrieval earns its keep is a question phrased differently from the text, as the Moon-landing query of [chapter 2](/learn/02-lexical-retrieval) was; [chapter 4](/learn/04-hybrid-and-reranking) combines the two.
+
+<span id="cx-precision" />
 
 **How small can the vectors be?** Switch the precision. The float32 vectors (1,536 bytes each) were measured once, offline: recall@5 <V of="dense.float32.recall@5" fmt="f3" />. Rounded to int8 (384 bytes): <V of="dense.evals.int8.mean.recall@5" fmt="f3" />, no measurable loss. To int4 (192 bytes, values −7 to 7): <V of="dense.evals.int4.mean.recall@5" fmt="f3" />. To one bit per dimension, the sign (48 bytes, compared by counting agreeing bits): <V of="dense.evals.binary.mean.recall@5" fmt="f3" />, and the answer's chunk is first only <V of="dense.evals.binary.mean.recall@1" fmt="pct" /> of the time. A 32-fold saving costs real recall at this size; production systems use binary vectors to shortlist and rescore the shortlist at higher precision.
 
@@ -58,3 +62,73 @@ out[i] = q < 0 ? -m : m;
 - Wang et al., [MiniLM](https://arxiv.org/abs/2002.10957) (2020); Reimers and Gurevych, [Sentence-BERT](https://arxiv.org/abs/1908.10084) (2019).
 
 </Callout>
+
+<CheckYourself>
+
+<Check
+  id="cx03-q1"
+  n={1}
+  input="slider"
+  min={0}
+  max={100}
+  step={1}
+  of="dense.evals.int8.mean.recall@1"
+  fmt="pct"
+  abs={5}
+  q="Dense retrieval (MiniLM, int8 vectors): how often is the answer's chunk first, over the 200 questions?"
+  href="#cx-dense-recall"
+  more="How dense retrieval does"
+>
+  Behind BM25's <V of="hybrid.evals.bm25.mean.recall@1" fmt="pct" /> on this
+  corpus, whose questions borrow the paragraph's words. Dense retrieval earns
+  its keep on questions phrased differently from the text.
+</Check>
+
+<Check
+  id="cx03-q2"
+  n={2}
+  choices={["int8", "int4", "One bit per dimension", "None: all lose recall"]}
+  answer={0}
+  q="Which rounding of the float32 vectors loses no measurable recall@5?"
+  href="#cx-precision"
+  more="How small can the vectors be?"
+>
+  int8: <V of="dense.evals.int8.mean.recall@5" fmt="f3" />, the same as
+  float32. Rounding errors mostly cancel over 384 components; int4 loses a
+  little and one bit a lot.
+</Check>
+
+<Check
+  id="cx03-q3"
+  n={3}
+  input="slider"
+  min={0}
+  max={100}
+  step={1}
+  of="dense.evals.binary.mean.recall@1"
+  fmt="pct"
+  abs={5}
+  q="With one bit per dimension (48 bytes a vector), how often is the answer's chunk first?"
+  href="#cx-precision"
+  more="How small can the vectors be?"
+>
+  A 32-fold saving costs real recall at this size. Production systems use
+  binary vectors to shortlist, then rescore the shortlist at higher precision.
+</Check>
+
+</CheckYourself>
+
+<Remember>
+
+- A dense retriever turns text into a vector so that similar meanings point in similar directions; neighbours are found by cosine.
+- The embedder reads at most 256 word pieces: anything longer is cut off.
+- int8 vectors lose nothing measurable here; binary vectors lose a lot unless rescored.
+- Dense retrieval wins on paraphrase; BM25 wins on rare exact words.
+
+<Keep>
+  int8 is free: recall@5 <V of="dense.evals.int8.mean.recall@5" fmt="f3" />
+  against <V of="dense.float32.recall@5" fmt="f3" /> for float32, at a quarter
+  of the bytes.
+</Keep>
+
+</Remember>
