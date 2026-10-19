@@ -11,11 +11,15 @@ A model has no memory between calls. Everything it can use to choose its next st
 
 The animation runs a research task of twelve questions, two from each of the six articles in the corpus. For each question the agent searches (BM25, [chapter 2](/learn/02-lexical-retrieval)) and reads the best chunk, then the next, until it has read the chunk that holds the answer. Each read is one model call. With no limit the window grows to <V of="window.runs.unbounded-1500.peak" fmt="int" /> tokens and the task costs <V of="window.runs.unbounded-1500.spent" fmt="int" /> input tokens; every fact stays in view, so all <V of="window.runs.unbounded-1500.recalled" fmt="int" /> questions are answered.
 
+<span id="cx-policies" />
+
 Give the window a budget of 1,500 tokens and something has to go. Three policies:
 
 - **Truncate**: drop the oldest read. Cheap, <V of="window.runs.truncate-1500.spent" fmt="int" /> tokens, but the facts in the dropped reads go with them: at the end the agent can answer only <V of="window.runs.truncate-1500.recalled" fmt="int" /> of the 12 questions. What it "knows" (the dots) grows with each read and shrinks with each drop.
 - **Compact**: when the window overflows, one extra model call summarises every read but the latest into a line per fact, and the summary replaces them. The agent keeps all <V of="window.runs.compact-1500.recalled" fmt="int" /> facts for <V of="window.runs.compact-1500.spent" fmt="int" /> tokens, <V of="derived.compact-1500.spent_vs_unbounded" fmt="pct" /> of the unbounded cost, in <V of="window.runs.compact-1500.compactions" fmt="int" /> compactions.
 - **Retrieve**: truncate, and when a question's fact has gone, search for it again before answering. Every question is answered (<V of="window.runs.retrieve-1500.recalled" fmt="int" />), but the agent reads <V of="window.runs.retrieve-1500.reads" fmt="int" /> chunks instead of <V of="window.runs.truncate-1500.reads" fmt="int" /> and spends <V of="window.runs.retrieve-1500.spent" fmt="int" /> tokens, more than with no limit at all, because each extra read pays for a full window.
+
+<span id="cx-lossy" />
 
 That summariser is perfect: it keeps one line per fact. Switch the **summariser** to **lossy** (each line kept with probability 0.75 at every compaction, an illustrative rate) and compaction at 1,500 tokens keeps only <V of="window.runs.lossy-compact-1500.recalled" fmt="int" /> of the 12 facts; [chapter 7](/learn/07-compaction-and-summarisation) measures what survives over a longer task.
 
@@ -30,6 +34,8 @@ The budgets (1,000 to 3,000 tokens) are **scaled down** so that a twelve-questio
 </Callout>
 
 <Layer kind="maths">
+
+<span id="cx-window-maths" />
 
 Let $W_t$ be the window at call $t$ and $T$ the number of calls. The input cost is $C_{\text{in}} = \sum_{t=1}^{T} |W_t|$. With no budget, $|W_t|$ grows by each read's length $\ell_t$, so the cost grows with the square of the number of reads: $C_{\text{in}} \approx \sum_t (|W_0| + \sum_{s<t} \ell_s)$.
 
@@ -57,3 +63,71 @@ const truncate = (qi: number | null) => {
 - The [agents](https://brendanjameslynskey.github.io/LLM_Hub_Agents/) and [RAG and retrieval](https://brendanjameslynskey.github.io/LLM_Hub_RAG_Retrieval/) slide series.
 
 </Callout>
+
+<CheckYourself>
+
+<Check
+  id="cx01-q1"
+  n={1}
+  input="number"
+  of="window.runs.truncate-1500.recalled"
+  fmt="int"
+  q="With a 1,500-token window and truncation (drop the oldest read), how many of the 12 questions can the agent answer at the end?"
+  href="#cx-policies"
+  more="Three policies"
+>
+  The facts in the dropped reads go with them. Truncation is the cheapest
+  policy, <V of="window.runs.truncate-1500.spent" fmt="int" /> input tokens,
+  and the most forgetful.
+</Check>
+
+<Check
+  id="cx01-q2"
+  n={2}
+  choices={["No limit", "Truncate", "Compact", "Retrieve"]}
+  answer={3}
+  q="Which run spends the most input tokens?"
+  href="#cx-policies"
+  more="Three policies"
+>
+  Retrieve, <V of="window.runs.retrieve-1500.spent" fmt="int" />: more than
+  with no limit at all (<V of="window.runs.unbounded-1500.spent" fmt="int" />),
+  because each extra read is another call that pays for a full window.
+</Check>
+
+<Check
+  id="cx01-q3"
+  n={3}
+  input="slider"
+  min={0}
+  max={100}
+  step={1}
+  of="derived.compact-1500.spent_vs_unbounded"
+  fmt="pct"
+  abs={5}
+  q="Compaction with the perfect summariser keeps all 12 facts. What share of the unbounded run's input tokens does it spend?"
+  href="#cx-policies"
+  more="Three policies"
+>
+  <V of="window.runs.compact-1500.spent" fmt="int" /> against
+  <V of="window.runs.unbounded-1500.spent" fmt="int" />, for
+  <V of="window.runs.compact-1500.compactions" fmt="int" /> extra summarising
+  calls. With a lossy summariser the facts start to go.
+</Check>
+
+</CheckYourself>
+
+<Remember>
+
+- The context window is the agent's working memory, and its bill: every call pays for the whole window again.
+- A task's input cost is the window's size summed over its calls.
+- Under a budget, truncation forgets, compaction summarises at the price of a call, and re-retrieval buys recall back with more calls.
+- A summary is only as good as the summariser: a lossy one forgets.
+
+<Keep>
+  At 1,500 tokens: truncation keeps <V of="window.runs.truncate-1500.recalled" fmt="int" />
+  of 12 facts, compaction all <V of="window.runs.compact-1500.recalled" fmt="int" />, for
+  <V of="derived.compact-1500.spent_vs_unbounded" fmt="pct" /> of the unbounded cost.
+</Keep>
+
+</Remember>

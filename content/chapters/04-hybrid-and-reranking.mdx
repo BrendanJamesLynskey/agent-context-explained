@@ -7,9 +7,13 @@
 
 <Layer kind="concept">
 
+<span id="cx-rrf" />
+
 BM25 and dense retrieval fail on different questions: one misses paraphrases, the other misses rare exact words. **Hybrid retrieval** runs both and merges the lists. Their scores are not comparable (a BM25 score of 11 and a cosine of 0.6 mean nothing to each other), so the robust way to merge is by **rank**: reciprocal rank fusion ([Cormack, Clarke and Büttcher, SIGIR 2009](https://doi.org/10.1145/1571941.1572114)) gives each chunk $\sum_r 1/(k + \mathrm{rank}_r)$, with $k = 60$ from the paper. A chunk near the top of both lists beats one at the very top of only one. The animation adds one rank of both lists per step; when both lists hold the same chunk at a rank, its score doubles.
 
 Over all <V of="corpus.questions" fmt="int" /> questions (top 50 of each list fused), RRF ranks the answer's chunk first <V of="hybrid.evals.rrf.mean.recall@1" fmt="pct" /> of the time, against <V of="hybrid.evals.bm25.mean.recall@1" fmt="pct" /> for BM25 alone and <V of="hybrid.evals.dense.mean.recall@1" fmt="pct" /> for dense alone; its nDCG@10 is <V of="hybrid.evals.rrf.mean.ndcg@10" fmt="f3" />. The alternative, normalising each list's scores to $[0, 1]$ and taking $\alpha \cdot \text{dense} + (1 - \alpha) \cdot \text{BM25}$, does a little better here at $\alpha = 0.5$ (<V of="hybrid.evals.weighted.mean.recall@1" fmt="pct" />, nDCG@10 <V of="hybrid.evals.weighted.mean.ndcg@10" fmt="f3" />), but it has a weight to tune, and the right weight depends on the corpus.
+
+<span id="cx-rerank" />
 
 **Reranking** is the second stage. A **cross-encoder** reads the question and a chunk together, every word of one attending to every word of the other, and outputs one relevance score. It is far more accurate than comparing two separately computed vectors, and far too slow to run over a whole corpus, so it rereads only the top $n$ of the first stage. Here it is [ms-marco-MiniLM-L6-v2](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L6-v2), trained on the MS MARCO passage-ranking task; its scores were recorded once, offline, for each question's candidates (<V of="corpus.rerank_pairs" fmt="int" /> question–chunk pairs). Reranking RRF's top 20 puts the answer's chunk first <V of="hybrid.evals.rerank.mean.recall@1" fmt="pct" /> of the time (nDCG@10 <V of="hybrid.evals.rerank.mean.ndcg@10" fmt="f3" />). A reranker cannot find what the first stage missed; it can only reorder, which is why the first stage is tuned for recall at a generous depth and the second for precision at the top.
 
@@ -22,6 +26,8 @@ Every score is real: BM25 and cosines recomputed by the engine, cross-encoder sc
 </Callout>
 
 <Layer kind="maths">
+
+<span id="cx-rrf-maths" />
 
 For a chunk at ranks $r_1$ and $r_2$ in the two lists, $\mathrm{RRF} = \frac{1}{k + r_1} + \frac{1}{k + r_2}$. With $k = 60$, first place in one list and absence from the other scores $1/61 \approx 0.0164$, while fifth place in both scores $2/65 \approx 0.0308$: agreement wins. A small $k$ makes the top ranks count for more (with $k = 10$, first place alone is $1/11$); a large $k$ flattens the curve. Only ranks enter, so no calibration between retrievers is needed.
 
@@ -59,3 +65,74 @@ return sorted.concat(order.slice(n));
 - How sure to be that one retriever beats another on a fixed set of questions: [Agent Evals Explained, uncertainty](https://agent-evals-explained.vercel.app/learn/04-uncertainty) (intervals on a measured rate) and [comparing two agents](https://agent-evals-explained.vercel.app/learn/05-comparing-two-agents) (paired comparisons).
 
 </Callout>
+
+<CheckYourself>
+
+<Check
+  id="cx04-q1"
+  n={1}
+  choices={[
+    "First in one list, absent from the other",
+    "Fifth in both lists",
+    "They tie",
+  ]}
+  answer={1}
+  q="With reciprocal rank fusion and k = 60, which chunk scores higher?"
+  href="#cx-rrf-maths"
+  more="The RRF arithmetic"
+>
+  Fifth in both: $2/65 \approx 0.031$ against $1/61 \approx 0.016$. Agreement
+  between the retrievers beats one retriever's enthusiasm.
+</Check>
+
+<Check
+  id="cx04-q2"
+  n={2}
+  input="slider"
+  min={0}
+  max={100}
+  step={1}
+  of="hybrid.evals.rerank.mean.recall@1"
+  fmt="pct"
+  abs={5}
+  q="Reranking RRF's top 20 with the cross-encoder: how often is the answer's chunk first?"
+  href="#cx-rerank"
+  more="Reranking"
+>
+  Up from <V of="hybrid.evals.rrf.mean.recall@1" fmt="pct" /> for RRF alone. A
+  cross-encoder reads the question and the chunk together, which is far more
+  accurate and far too slow to run over the whole corpus.
+</Check>
+
+<Check
+  id="cx04-q3"
+  n={3}
+  choices={[
+    "Yes, it rescores the whole corpus",
+    "No: it can only reorder what the first stage found",
+  ]}
+  answer={1}
+  q="Can the reranker find an answer the first stage missed?"
+  href="#cx-rerank"
+  more="Reranking"
+>
+  No. That is why the first stage is tuned for recall at a generous depth, and
+  the second for precision at the top.
+</Check>
+
+</CheckYourself>
+
+<Remember>
+
+- BM25 and dense retrieval fail on different questions; hybrid retrieval runs both and merges.
+- Merge by rank (RRF, k = 60): scores from different retrievers are not comparable, ranks are.
+- A cross-encoder reranks the top n: accurate, slow, and blind to what the first stage missed.
+- First stage for recall, second stage for precision.
+
+<Keep>
+  Recall@1: BM25 <V of="hybrid.evals.bm25.mean.recall@1" fmt="pct" />, RRF
+  <V of="hybrid.evals.rrf.mean.recall@1" fmt="pct" />, RRF then rerank
+  <V of="hybrid.evals.rerank.mean.recall@1" fmt="pct" />.
+</Keep>
+
+</Remember>

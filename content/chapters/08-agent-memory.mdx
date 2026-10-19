@@ -7,6 +7,8 @@
 
 <Layer kind="concept">
 
+<span id="cx-memory" />
+
 The window is gone when a session ends. Whatever the agent should know next time has to be **written** somewhere and **read** back. The animation runs <V of="memory.plan.sessions.length" fmt="int" /> sessions of three research questions each. At the start of every later session the agent is **probed**: each question it researched comes back once, one to three sessions later, and a few **neighbour** questions ask about something that was in a chunk it read but was never asked. A final session holds probes only. That makes <V of="memory.runs.none.probes" fmt="int" /> probes: <V of="memory.runs.none.repeat.1" fmt="int" /> repeats and <V of="memory.runs.none.neighbour.1" fmt="int" /> neighbours. A probe is **recalled** when the memory the agent puts in that call holds the answer.
 
 - **None**: nothing carries over, so nothing is recalled.
@@ -14,6 +16,8 @@ The window is gone when a session ends. Whatever the agent should know next time
 - **Scratchpad**: a notes file, one "question → answer" line per question answered, loaded whole. It is small (<V of="memory.runs.scratchpad.stored_tokens" fmt="int" /> tokens at the end) and recalls every repeat (<V of="memory.runs.scratchpad.repeat.0" fmt="int" /> of 18), but **no** neighbour: notes keep the answers to the questions that were asked, not the text around them. Capped at 128 tokens, the oldest notes are forgotten and recall falls to <V of="memory.runs.scratchpad-cap.recalled" fmt="int" />.
 - **Episodic**: every read is an episode with a time and an importance rating. At a probe the top three by recency + importance + relevance go in the call, the scoring of _Generative Agents_ ([Park et al., arXiv:2304.03442](https://arxiv.org/abs/2304.03442)), whose recency decays by 0.995 per hour since an episode was last retrieved. A chunk read twice is **consolidated** into one episode, so the store holds <V of="memory.runs.episodic.items" fmt="int" /> episodes for 22 reads. It recalls <V of="memory.runs.episodic.recalled" fmt="int" /> of 22 for <V of="memory.runs.episodic.read_tokens" fmt="int" /> tokens. Kept to at most eight episodes (forgetting the lowest recency + importance), it recalls <V of="memory.runs.episodic-cap.recalled" fmt="int" />.
 - **Semantic**: a scripted extractor turns each read into **facts**: the sentence that answered the question and the chunk's first sentence. At a probe the three facts closest to the question by cosine go in the call. It recalls <V of="memory.runs.semantic.recalled" fmt="int" /> of 22, as many as the episodes, for <V of="memory.runs.semantic.read_tokens" fmt="int" /> tokens, under a fifth as many, because a fact is a sentence and an episode is a chunk. The price is paid at write time: extraction reads every chunk once more (<V of="memory.runs.semantic.write_tokens" fmt="int" /> tokens of model calls).
+
+<span id="cx-scatter" />
 
 The scatter under the animation puts every policy on one chart, with $k$ (items per probe) swept for the two retrieved memories: semantic memory with $k = 1$ recalls <V of="memory.sweep.semantic k=1.recalled" fmt="int" /> for <V of="memory.sweep.semantic k=1.read_tokens" fmt="int" /> tokens; episodic with $k = 5$ recalls <V of="memory.sweep.episodic k=5.recalled" fmt="int" /> for <V of="memory.sweep.episodic k=5.read_tokens" fmt="int" />. Recall rises with tokens read, and the cheapest point at a given recall is the memory that stores the smallest unit that still holds the answer.
 
@@ -55,3 +59,68 @@ sc = store.map((_, i) => rec[i]! + imp[i]! + rn[i]!);
 - A stored memory is input the agent will read later, so where it came from matters: [Agent Security Explained, untrusted input](https://agent-security-explained.vercel.app/learn/02-untrusted-input) labels every value with its source, and [trust boundaries](https://agent-security-explained.vercel.app/learn/01-trust-boundaries) shows why a memory written from untrusted text stays untrusted when it is read back.
 
 </Callout>
+
+<CheckYourself>
+
+<Check
+  id="cx08-q1"
+  n={1}
+  choices={["All 4", "Half of them", "None"]}
+  answer={2}
+  q="The scratchpad (one 'question → answer' line per question) recalls every repeat. How many of the 4 neighbour probes does it recall?"
+  href="#cx-memory"
+  more="Five memories"
+>
+  None: notes keep the answers to the questions that were asked, not the text
+  around them, and a neighbour asks about that text.
+</Check>
+
+<Check
+  id="cx08-q2"
+  n={2}
+  input="slider"
+  min={0}
+  max={100}
+  step={1}
+  v="ch08.semanticOverEpisodic"
+  fmt="pct"
+  abs={5}
+  q="Semantic memory recalls as many probes as episodic memory. What share of episodic memory's read tokens does it use?"
+  href="#cx-memory"
+  more="Five memories"
+>
+  <V of="memory.runs.semantic.read_tokens" fmt="int" /> against
+  <V of="memory.runs.episodic.read_tokens" fmt="int" />: a fact is a sentence and
+  an episode is a chunk. The price is paid at write time, when the extractor
+  reads every chunk once more.
+</Check>
+
+<Check
+  id="cx08-q3"
+  n={3}
+  choices={["The transcript", "The scratchpad", "Episodic", "Semantic"]}
+  answer={0}
+  q="Which memory reads the most tokens over the probes?"
+  href="#cx-scatter"
+  more="All the memories on one chart"
+>
+  The transcript, <V of="memory.runs.transcript.read_tokens" fmt="int" />: it
+  recalls everything, but every call carries the whole history, and the cost
+  grows with every session.
+</Check>
+
+</CheckYourself>
+
+<Remember>
+
+- What an agent should know next time must be written somewhere and read back.
+- Loading everything recalls everything, at a cost that grows with the history.
+- Notes keep answers, not the text around them; episodes keep text; facts keep sentences.
+- The cheapest memory at a given recall stores the smallest unit that still holds the answer.
+
+<Keep>
+  Episodic and semantic memory both recall <V of="memory.runs.semantic.recalled" fmt="int" />
+  of 22 probes; semantic reads <V v="ch08.semanticOverEpisodic" fmt="pct" /> of the tokens.
+</Keep>
+
+</Remember>

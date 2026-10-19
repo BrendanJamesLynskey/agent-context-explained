@@ -13,7 +13,11 @@ Before anything can be retrieved, documents are cut into **chunks**, and the chu
 - **Recursive** (the scheme of LangChain's `RecursiveCharacterTextSplitter`): split at paragraphs; split a paragraph that is too long at sentences, a sentence that is too long at fixed windows; then merge neighbouring pieces while they fit in $S$.
 - **Semantic**: embed every sentence, measure how similar each sentence is to the next (the line along the bottom of the animation), and break where the similarity drops to the article's lowest quarter, as well as wherever $S$ would be exceeded.
 
+<span id="cx-chunk-cut" />
+
 The animation lays the three chunkers' chunks over one stretch of the complexity-theory article. A question asked about this stretch has the answer "set of triples"; fixed 256-token chunks cut it in two (the hatched mark), so no single chunk holds it and that question is lost whatever the retriever does.
+
+<span id="cx-chunk-table" />
 
 The table measures each chunking over all <V of="corpus.questions" fmt="int" /> questions. Fixed chunks lose answers at their boundaries: <V of="chunking.table.fixed-128.bm25.lost" fmt="int" /> at 128 tokens, <V of="chunking.table.fixed-256.bm25.lost" fmt="int" /> at 256, <V of="chunking.table.fixed-512.bm25.lost" fmt="int" /> at 512. Long chunks have a second problem: the embedder reads only 256 word pieces, and <V of="truncated.fixed-512" fmt="int" /> of the <V of="chunking.table.fixed-512.chunks" fmt="int" /> 512-token chunks are longer than that, so their vectors describe only their first half; dense recall@5 falls to <V of="chunking.table.fixed-512.dense.mean.recall@5" fmt="f3" />, while BM25, which reads every word, gets <V of="chunking.table.fixed-512.bm25.mean.recall@5" fmt="f3" />. The recursive chunker respects paragraphs, loses no answer, and gives the best dense recall@5 (<V of="chunking.table.recursive-256.dense.mean.recall@5" fmt="f3" />) with chunks of <V of="chunking.table.recursive-256.mean_tokens" fmt="num" /> tokens on average. The semantic chunker makes many small chunks (<V of="chunking.table.semantic-256.chunks" fmt="int" />, <V of="chunking.table.semantic-256.mean_tokens" fmt="num" /> tokens on average) and does no better than fixed 256-token chunks here (dense recall@5 <V of="chunking.table.semantic-256.dense.mean.recall@5" fmt="f3" /> against <V of="chunking.table.fixed-256.dense.mean.recall@5" fmt="f3" />): its breaks follow topic shifts, but small chunks give BM25 and the embedder less to go on, and it still cut <V of="chunking.table.semantic-256.bm25.lost" fmt="int" /> answer in two. Overlap (fixed 256 with 64 tokens shared) loses no answer, but some answers now sit in two chunks, which halves recall@1 for those questions by definition; its MRR, which only asks where the first relevant chunk is, is BM25's best of the fixed chunkings (<V of="chunking.table.fixed-256-o64.bm25.mean.mrr@10" fmt="f3" /> against <V of="chunking.table.fixed-256.bm25.mean.mrr@10" fmt="f3" />).
 
@@ -57,3 +61,65 @@ return [thr, sims.map((s) => s <= thr)];
 - [Agent Harnesses Explained](https://agent-harnesses-explained.vercel.app) for what happens to chunks once they are tool results in a real loop.
 
 </Callout>
+
+<CheckYourself>
+
+<Check
+  id="cx05-q1"
+  n={1}
+  input="number"
+  of="truncated.fixed-512"
+  fmt="int"
+  q="Fixed 512-token chunks make 77 chunks. How many of them are longer than the embedder reads?"
+  href="#cx-chunk-table"
+  more="The measurements"
+>
+  Almost all: the embedder reads only 256 word pieces, so their vectors
+  describe only their first half. Dense recall@5 falls to
+  <V of="chunking.table.fixed-512.dense.mean.recall@5" fmt="f3" />, while BM25,
+  which reads every word, gets <V of="chunking.table.fixed-512.bm25.mean.recall@5" fmt="f3" />.
+</Check>
+
+<Check
+  id="cx05-q2"
+  n={2}
+  choices={["Fixed, 256 tokens", "Recursive, 256 tokens", "Semantic, 256 tokens"]}
+  answer={1}
+  q="Which chunker gives the best dense recall@5?"
+  href="#cx-chunk-table"
+  more="The measurements"
+>
+  Recursive: it respects paragraphs, loses no answer and scores
+  <V of="chunking.table.recursive-256.dense.mean.recall@5" fmt="f3" />. The
+  semantic chunker's many small chunks give the retrievers less to go on.
+</Check>
+
+<Check
+  id="cx05-q3"
+  n={3}
+  input="number"
+  of="chunking.table.fixed-256.bm25.lost"
+  fmt="int"
+  q="Fixed 256-token chunks with no overlap: how many of the 200 answers are cut in two, so that no single chunk holds them?"
+  href="#cx-chunk-cut"
+  more="Where the cuts fall"
+>
+  Those questions are lost whatever the retriever does. Longer chunks cut
+  fewer, and an overlap at least as long as the answer cuts none.
+</Check>
+
+</CheckYourself>
+
+<Remember>
+
+- The chunk is the unit everything else sees: BM25's counts, the embedder's vector, the window's contents.
+- Fixed chunks cut answers at their boundaries; overlap fixes that at the price of duplicates.
+- Chunks longer than the embedder reads give vectors that describe only their start.
+- Respecting the document's structure (paragraphs, then sentences) was the best choice here.
+
+<Keep>
+  Keep chunks under the embedder's limit: past it, dense recall@5 fell to
+  <V of="chunking.table.fixed-512.dense.mean.recall@5" fmt="f3" />.
+</Keep>
+
+</Remember>

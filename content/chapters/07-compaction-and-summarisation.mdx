@@ -11,9 +11,15 @@
 
 With no budget the long task costs <V of="compaction.baselines.unbounded-1500.spent" fmt="int" /> input tokens and every fact stays in view. Truncating to a 1,500-token window keeps only <V of="compaction.baselines.truncate-1500.recalled" fmt="int" /> facts. A **perfect** summariser keeps <V of="compaction.runs.compact-0-1500.recalled" fmt="int" /> for <V of="compaction.runs.compact-0-1500.spent" fmt="int" /> tokens, in <V of="compaction.runs.compact-0-1500.compactions" fmt="int" /> compactions; it is not all 36 even so, because by the end the summary itself outgrows the budget and its oldest lines are trimmed. At 2,000 tokens the summary fits and all <V of="compaction.runs.compact-0-2000.recalled" fmt="int" /> survive.
 
+<span id="cx-lossy-sum" />
+
 A real summariser drops things. The engine's **lossy** summariser rewrites the whole summary at every compaction and keeps each line with probability $1 - \ell$, drawn from the shared seeded generator, so a fact summarised $n$ times survives with probability $(1 - \ell)^n$. Over 20 seeded runs at $\ell = 0.25$ and a 1,500-token window, the measured share of facts left after one compaction is <V of="compaction.studies.compact-0.25-1500.survival.0.measured" fmt="f3" />, after two <V of="compaction.studies.compact-0.25-1500.survival.1.measured" fmt="f3" />, after five <V of="compaction.studies.compact-0.25-1500.survival.4.measured" fmt="f3" /> (the model says <V of="compaction.studies.compact-0.25-1500.survival.4.model" fmt="f3" />). The agent answers <V of="compaction.studies.compact-0.25-1500.recalled" fmt="num" /> of 36 questions on average.
 
+<span id="cx-oldest" />
+
 **Which** facts go is not random: the oldest. A fact learned early is summarised again at every later compaction, so the first sixth of the task is answered in <V of="derived.compaction-compact-0.25-1500.first_sixth" fmt="pct" /> of runs and the last sixth in <V of="derived.compaction-compact-0.25-1500.last_sixth" fmt="pct" />. Compaction does not forget evenly; it forgets the beginning of the task. A bigger window means fewer compactions and so more survivors: at 2,000 tokens the same summariser leaves <V of="compaction.studies.compact-0.25-2000.recalled" fmt="num" /> facts.
+
+<span id="cx-re-retrieve" />
 
 The remedy is the one from chapter 1: notice the fact is gone and **search for it again**. With re-retrieval every one of the 36 questions is answered at every loss rate, but the agent pays for it: <V of="compaction.runs.compact+retrieve-0.25-1500.spent" fmt="int" /> tokens in one run at $\ell = 0.25$, about twice what compaction alone spends (<V of="compaction.runs.compact-0.25-1500.spent" fmt="int" />). Re-retrieval needs the source to still be there; when it is not, the next chapter's memories are all there is.
 
@@ -53,3 +59,69 @@ if (summariser === "lossy") {
 - The [agents](https://brendanjameslynskey.github.io/LLM_Hub_Agents/) slide series.
 
 </Callout>
+
+<CheckYourself>
+
+<Check
+  id="cx07-q1"
+  n={1}
+  input="number"
+  of="compaction.studies.compact-0.25-1500.survival.4.model"
+  fmt="f3"
+  q="A summariser keeps each line with probability 0.75 at every compaction. What share of facts does the model say survive five compactions? (to three decimals)"
+  href="#cx-lossy-sum"
+  more="A lossy summariser"
+>
+  $(1 - 0.25)^5$. Over 20 seeded runs the measured share was
+  <V of="compaction.studies.compact-0.25-1500.survival.4.measured" fmt="f3" />:
+  losses compound with every compaction a fact faces.
+</Check>
+
+<Check
+  id="cx07-q2"
+  n={2}
+  input="slider"
+  min={0}
+  max={100}
+  step={1}
+  of="derived.compaction-compact-0.25-1500.first_sixth"
+  fmt="pct"
+  abs={5}
+  q="Questions from the first sixth of the 36-question task: in what share of runs are they still answered at the end?"
+  href="#cx-oldest"
+  more="Which facts go"
+>
+  Almost never, against <V of="derived.compaction-compact-0.25-1500.last_sixth" fmt="pct" />
+  for the last sixth. A fact learned early is summarised again at every later
+  compaction: compaction forgets the beginning of the task.
+</Check>
+
+<Check
+  id="cx07-q3"
+  n={3}
+  input="number"
+  v="ch07.retrieveOverCompact"
+  q="Re-retrieval answers every question. How many times as many input tokens does it spend as compaction alone (loss 0.25, 1,500 tokens)?"
+  href="#cx-re-retrieve"
+  more="The remedy"
+>
+  <V of="compaction.runs.compact+retrieve-0.25-1500.spent" fmt="int" /> against
+  <V of="compaction.runs.compact-0.25-1500.spent" fmt="int" />: each lost fact
+  costs a search and up to three reads, each paying for a window.
+</Check>
+
+</CheckYourself>
+
+<Remember>
+
+- A lossy summariser that keeps each line with probability 1 − ℓ keeps a fact through n compactions with probability (1 − ℓ)ⁿ.
+- So compaction forgets the oldest facts first, not at random.
+- A bigger window means fewer compactions and more survivors.
+- Re-retrieval turns a lost fact into a cost instead of an error, if the source is still there.
+
+<Keep>
+  At ℓ = 0.25, after five compactions about a quarter of the facts are left
+  (measured <V of="compaction.studies.compact-0.25-1500.survival.4.measured" fmt="f3" />).
+</Keep>
+
+</Remember>
